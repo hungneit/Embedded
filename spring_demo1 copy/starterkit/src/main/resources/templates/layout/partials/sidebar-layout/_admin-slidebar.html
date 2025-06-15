@@ -1,0 +1,30 @@
+<!--begin::Sidebar-->
+<div id="kt_app_sidebar" class="col-auto sidebar sidebar-admin" data-kt-drawer="true" data-kt-drawer-name="app-sidebar" data-kt-drawer-activate="{default: true, lg: false}" data-kt-drawer-overlay="true" data-kt-drawer-direction="start" data-kt-drawer-toggle="#kt_app_sidebar_mobile_toggle">
+    <div th:replace="${@theme.getView('partials/sidebar-layout/sidebar/_logo.html')}"></div>
+    <div th:replace="${@theme.getView('partials/sidebar-layout/sidebar/_admin-menu.html')}"></div>
+    <div id="sidebarCollapse"><i class="fa-solid fa-caret-right text-primary"></i></div>
+
+    <script>
+        $(document).ready(function () {
+            // Hover effect để hiển thị sidebar khi di chuột vào
+            $('.sidebar-admin').hover(
+                function () {
+                    if (!$(this).hasClass('show-active')) {
+                        $(this).addClass('hover-active');
+                    }
+                },
+                function () {
+                    if (!$(this).hasClass('show-active')) {
+                        $(this).removeClass('hover-active');
+                    }
+                }
+            );
+
+            // Toggle button để cố định trạng thái mở/đóng của sidebar
+            $('#sidebarCollapse').on('click', function () {
+                $('.sidebar-admin').toggleClass('show-active');
+            });
+        });
+    </script>
+</div>
+<!--end::Sidebar-->

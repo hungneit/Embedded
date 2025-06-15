@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" th:attr="__${@theme.printHtmlAttributes('html')}__">
+<!--begin::Head-->
+
+<head>
+    <title>Volecom</title>
+    <meta charset="utf-8" />
+    <meta name="description" content="" />
+    <meta name="keywords" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="" />
+
+    <link rel="icon" type="image/png" href="/assets/media/logos/logo-my-volecom.png"/>
+
+    <!-- Favicon cho Windows -->
+    <meta name="msapplication-TileColor" content="#ffffff">
+    <meta name="msapplication-TileImage" content="/assets/media/logos/favicon-volecom.png">
+    <meta name="theme-color" content="#ffffff">
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <!-- Bootstrap JS + Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-eR+zU+3+7F+5HvR6t0jW2xqklJ9ZfU2ClAjlwh0o3ylxQwBSAyoacJFDx5TUpnHg" crossorigin="anonymous"></script>
+
+    <link th:each="font: ${@theme.getFonts()}" rel="stylesheet" th:href="@{${font}}" />
+    <!--end::Fonts-->
+
+    <!--begin::Vendor Stylesheets(optional)-->
+    <link th:each="file: ${@theme.getVendors('Css')}" rel="stylesheet" type="text/css" th:href="@{${file}}" />
+    <!--end::Vendor Stylesheets-->
+
+    <!--begin::Global Stylesheets(mandatory)-->
+    <link th:each="file: ${@theme.getGlobalAssets('Css')}" rel="stylesheet" type="text/css" th:href="@{${file}}" />
+    <!--end::Global Stylesheets-->
+
+    <!--begin::Custom Stylesheets(optional)-->
+    <link th:each="file: ${@theme.getCssFiles()}" rel="stylesheet" type="text/css" th:href="@{${@theme.getAssetPath(file)}}" />
+    <!--end::Custom Stylesheets-->
+
+    <!-- Swiper CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper/swiper-bundle.min.css">
+    <!-- Swiper JS -->
+    <script src="https://cdn.jsdelivr.net/npm/swiper/swiper-bundle.min.js"></script>
+
+    <!-- SweetAlert2 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Clipboard -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.11/clipboard.min.js"></script>
+
+    <!-- Cute Alert -->
+    <link class="main-stylesheet" href="https://cdn.jsdelivr.net/npm/cute-alert@1.0.0/style.css" rel="stylesheet" type="text/css">
+    <script src="https://cdn.jsdelivr.net/npm/cute-alert@1.0.0/cute-alert.js"></script>
+
+    <!-- Simple Notify CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/simple-notify@1.0.4/dist/simple-notify.css" />
+
+    <!-- Simple Notify JS -->
+    <script src="https://cdn.jsdelivr.net/npm/simple-notify@1.0.4/dist/simple-notify.min.js"></script>
+
+    <!-- Flatpickr CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+    <!-- Notyf CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css">
+
+    <!-- Fancybox CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+    <!-- Fancybox JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js"></script>
+    <!-- Select2 -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css" rel="stylesheet" />
+    <!--  Select2 -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
+    <!-- Import thư viện Flatpickr -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XCG75L01DT"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable/dist/jspdf.plugin.autotable.min.js"></script>
+    <!-- Summernote CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-bs4.min.css" rel="stylesheet">
+
+    <!-- Summernote JS -->
+    <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-bs4.min.js"></script>
+
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config', 'G-XCG75L01DT');
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+    <style>
+        /* Màn hình loading */
+     #loading-screen {
+       position: fixed;
+       top: 0;
+       left: 0;
+       width: 100%;
+       height: 100%;
+       background: white;
+       display: flex;
+       justify-content: center;
+       align-items: center;
+       z-index: 9999;
+     }
+
+     /* Container chứa logo + chấm */
+     .loading-inner {
+       display: flex;
+       flex-direction: column;
+       align-items: center;
+     }
+
+     /* Logo và text VOL ECOM */
+     .loading-content {
+       display: flex;
+       align-items: center;
+       justify-content: center;
+       margin-bottom: 20px;
+     }
+
+     .loading-logo {
+       height: 40px;
+       width: auto;
+       display: block;
+       margin-right: 10px;
+     }
+
+     /* Dots animation container */
+     .dots-container {
+       display: flex;
+       align-items: center;
+       justify-content: center;
+     }
+
+     /* Dot style */
+     .dot {
+       height: 20px;
+       width: 20px;
+       margin-right: 10px;
+       border-radius: 50%;
+       background-color: #44b6f6;
+       animation: pulse 1.5s infinite ease-in-out;
+     }
+
+     .dot:last-child {
+       margin-right: 0;
+     }
+
+     /* Delay để tạo hiệu ứng động */
+     .dot:nth-child(1) {
+       animation-delay: -0.3s;
+     }
+     .dot:nth-child(2) {
+       animation-delay: -0.1s;
+     }
+     .dot:nth-child(3) {
+       animation-delay: 0.1s;
+     }
+     .dot:nth-child(4) {
+       animation-delay: 0.3s;
+     }
+     .dot:nth-child(5) {
+       animation-delay: 0.5s;
+     }
+
+     /* Hiệu ứng pulse */
+     @keyframes pulse {
+       0% {
+         transform: scale(0.8);
+         background-color: #44b6f6;
+         box-shadow: 0 0 0 0 rgba(68, 182, 246, 0.7);
+       }
+       50% {
+         transform: scale(1.2);
+         background-color: #44b6f6;
+         box-shadow: 0 0 0 10px rgba(68, 182, 246, 0);
+       }
+       100% {
+         transform: scale(0.8);
+         background-color: #44b6f6;
+         box-shadow: 0 0 0 0 rgba(68, 182, 246, 0.7);
+       }
+     }
+
+    </style>
+</head>
+<!--end::Head-->
+
+<body th:attr="__${@theme.printHtmlAttributes('body')}__" th:class="${@theme.printHtmlClasses('body')}">
+    <div id="loading-screen">
+        <div class="loading-inner">
+            <div class="loading-content">
+                <img
+                        alt="Logo"
+                        src="/assets/media/logos/logo-my-volecom.png"
+                        class="loading-logo"
+                />
+                <div class="loading-text">
+            <span class="fw-bolder fs-5 text-dark">VOL</span
+            ><span class="fw-bolder fs-5" style="color: #44b6f6">ECOM</span>
+                </div>
+            </div>
+
+            <div class="dots-container">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <th:block th:replace="partials/theme-mode/_init.html"></th:block>
+
+    <th:block layout:fragment="body"></th:block>
+
+    <th:block layout:fragment="offcanvas"></th:block>
+
+    <!--begin::Global Javascript(mandatory)-->
+    <script th:each="file: ${@theme.getGlobalAssets('Js')}" th:src="${file}"></script>
+    <!--end::Global Javascript-->
+
+    <!--begin::Vendors Javascript(optional)-->
+    <script th:each="file: ${@theme.getVendors('Js')}" th:src="${file}"></script>
+    <!--end::Vendors Javascript-->
+
+    <!--begin::Custom Javascript(optional)-->
+    <script th:each="file: ${@theme.getJavascriptFiles()}" th:src="${@theme.getAssetPath(file)}"></script>
+
+    <!--end::Custom Javascript-->
+
+    <script>
+        window.addEventListener("load", function () {
+              const loadingScreen = document.getElementById("loading-screen");
+              loadingScreen.style.opacity = "0";
+              setTimeout(() => {
+                  loadingScreen.style.display = "none";
+              }, 500);
+          });
+
+
+
+    </script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            let links = document.querySelectorAll(".menu-item");
+            let currentPath = window.location.pathname; // Lấy đường dẫn trang hiện tại
+
+            links.forEach(link => {
+                if (link.href.includes(currentPath)) {
+                    link.classList.add("menu-item-active");
+                }
+            });
+        });
+
+
+    </script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+          const languageToggle = document.getElementById("language-toggle");
+          const languageDropdown = document.getElementById("language-dropdown");
+          const selectedLangFlag = document.getElementById("selected-lang-flag");
+
+          // Ưu tiên thứ tự lấy lang
+          const urlParams = new URLSearchParams(window.location.search);
+          let currentLang = urlParams.get("lang")
+            || sessionStorage.getItem("preferredLang")
+            || localStorage.getItem("preferredLang")
+            || "en";
+
+          // 🔁 Cập nhật flag cho nút toggle khi trang vừa load
+          const currentSelectedItem = languageDropdown.querySelector(`li[data-lang="${currentLang}"]`);
+          if (currentSelectedItem) {
+            const flagUrl = currentSelectedItem.getAttribute("data-flag");
+            if (flagUrl) selectedLangFlag.src = flagUrl;
+          }
+
+          // Toggle dropdown
+          languageToggle.addEventListener("click", function (e) {
+            e.stopPropagation();
+            languageDropdown.style.display = languageDropdown.style.display === "block" ? "none" : "block";
+          });
+
+          // Click ngoài dropdown để đóng
+          document.addEventListener("click", function () {
+            languageDropdown.style.display = "none";
+          });
+
+          // Xử lý chọn ngôn ngữ
+          languageDropdown.querySelectorAll("li").forEach(function (item) {
+            item.addEventListener("click", function () {
+              const selectedLang = item.getAttribute("data-lang");
+              const selectedFlag = item.getAttribute("data-flag");
+
+              if (selectedLang && selectedFlag) {
+                // Cập nhật hiển thị và lưu
+                selectedLangFlag.src = selectedFlag;
+                localStorage.setItem("preferredLang", selectedLang);
+                sessionStorage.setItem("preferredLang", selectedLang);
+
+                // Cập nhật URL và reload
+                const url = new URL(window.location.href);
+                url.searchParams.set("lang", selectedLang);
+                window.location.href = url.toString();
+              }
+            });
+          });
+        });
+    </script>
+
+
+
+
+
+    <!-- From Uiverse.io by Mohammad-Rahme-576 -->
+    <div class="tooltip-button-ring" id="tooltipRing">
+    <!-- Nút chính -->
+        <div class="button-ring">
+            <div class="button-ring-circle all-circle"></div>
+            <div class="button-ring-circle-fill all-circle-fill"></div>
+            <div class="form-img-circle all-img-circle">
+                <i class="fa-solid fa-comments text-white"></i>
+            </div>
+        </div>
+
+        <!-- Tooltip hiện khi hover -->
+        <div class="tooltip-content">
+            <!-- WhatsApp -->
+            <div class="button-ring social-ring">
+                <div class="button-ring-circle whatsapp-circle"></div>
+                <div class="button-ring-circle-fill whatsapp-circle-fill"></div>
+                <div class="form-img-circle whatsapp-img-circle">
+                    <a href="https://wa.me/84886989335" target="_blank" class="social-icon-link">
+                        <img alt="whatsapp" src="/assets/media/misc/whatsapp.png" style=" width: 28px;">
+                    </a>
+                </div>
+            </div>
+
+            <!-- Telegram -->
+            <div class="button-ring social-ring">
+                <div class="button-ring-circle telegram-circle"></div>
+                <div class="button-ring-circle-fill telegram-circle-fill"></div>
+                <div class="form-img-circle telegram-img-circle">
+                    <a href="https://t.me/volecomagency" target="_blank" class="social-icon-link">
+                        <img alt="telegram" src="/assets/media/misc/telegram.png" style=" width: 28px;">
+                    </a>
+                </div>
+            </div>
+
+            <div class="button-ring social-ring">
+                <div class="button-ring-circle telegram-circle"></div>
+                <div class="button-ring-circle-fill telegram-circle-fill"></div>
+                <div class="form-img-circle telegram-img-circle">
+                    <a href="https://zalo.me/0967789999" target="_blank" class="social-icon-link">
+                        <img alt="telegram" src="https://upload.wikimedia.org/wikipedia/commons/9/91/Icon_of_Zalo.svg" style=" width: 28px;">
+                    </a>
+                </div>
+            </div>
+
+            <!-- Messenger -->
+            <div class="button-ring social-ring">
+                <div class="button-ring-circle messenger-circle"></div>
+                <div class="button-ring-circle-fill messenger-circle-fill"></div>
+                <div class="form-img-circle messenger-img-circle">
+                    <a href="https://m.me/volecomagency" target="_blank" class="social-icon-link">
+                        <img alt="messenger" src="/assets/media/misc/messenger.png" style=" width: 28px;">
+                    </a>
+                </div>
+            </div>
+        </div>
+        <!-- Nút X đóng -->
+        <div class="close-ring-btn" onclick="hideTooltipRing()">×</div>
+
+    </div>
+
+    <style>
+        .tooltip-button-ring {
+         position: fixed;
+         bottom: 30px;
+         right: 30px;
+         z-index: 999999;
+       }
+
+       /* Tooltip hiển thị khi hover */
+       .tooltip-button-ring:hover .tooltip-content {
+         opacity: 1;
+         visibility: visible;
+         transform: translateX(-50%) scale(1);
+         pointer-events: auto;
+       }
+
+       .tooltip-content {
+         position: absolute;
+         bottom: 110%;
+         left: 50%;
+         transform: translateX(-50%) scale(0.8);
+         display: flex;
+         flex-direction: column;
+         align-items: center;
+         background: transparent;
+         pointer-events: none;
+         opacity: 0;
+         visibility: hidden;
+         transition: all 0.4s ease;
+       }
+
+       /* Ring animation */
+       .button-ring {
+         position: relative;
+         width: 60px;
+         height: 60px;
+       }
+
+       .button-ring-circle {
+         width: 70px;
+         height: 70px;
+         position: absolute;
+         top: 5px;
+         left: 5px;
+         border-radius: 50%;
+         animation: phonering-alo-circle-anim 1.2s infinite ease-in-out;
+         opacity: 0.5;
+       }
+
+       .button-ring-circle-fill {
+         width: 50px;
+         height: 50px;
+         position: absolute;
+         top: 15px;
+         left: 15px;
+         border-radius: 50%;
+         animation: phonering-alo-circle-fill-anim 2.3s infinite ease-in-out;
+       }
+
+       .form-img-circle {
+         width: 40px;
+         height: 40px;
+         position: absolute;
+         top: 20px;
+         left: 20px;
+         border-radius: 50%;
+         display: flex;
+         align-items: center;
+         justify-content: center;
+         animation: phonering-alo-circle-img-anim 1s infinite ease-in-out;
+         z-index: 2;
+       }
+
+       .social-icon-link {
+         color: white;
+         font-size: 20px;
+       }
+
+       /* Colors */
+       .all-circle, .all-circle-fill {
+         background-color: rgba(110, 142, 251, 0.5);
+       }
+       .all-img-circle {
+         background-color: #6e8efb;
+       }
+
+       .whatsapp-circle {
+         background-color: rgba(37, 211, 102, 0.5);
+       }
+       .whatsapp-circle-fill {
+         background-color: rgba(37, 211, 102, 0.8);
+       }
+       .whatsapp-img-circle {
+         background-color: #25D366;
+       }
+
+       .telegram-circle {
+         background-color: rgba(0, 136, 204, 0.5);
+       }
+       .telegram-circle-fill {
+         background-color: rgba(0, 136, 204, 0.8);
+       }
+       .telegram-img-circle {
+         background-color: #fff;
+       }
+
+       .messenger-circle {
+         background-color: #da84ffab;
+       }
+       .messenger-circle-fill {
+         background-color: #da84ffab;
+       }
+       .messenger-img-circle {
+         background-color: #fff;
+       }
+
+       /* Animations */
+       @keyframes phonering-alo-circle-anim {
+         0% {
+           transform: scale(0.7);
+           opacity: 0.1;
+         }
+         30% {
+           transform: scale(0.9);
+           opacity: 0.5;
+         }
+         100% {
+           transform: scale(1.1);
+           opacity: 0.1;
+         }
+       }
+
+       @keyframes phonering-alo-circle-fill-anim {
+         0%, 100% {
+           transform: scale(1.1);
+           opacity: 0.6;
+         }
+         50% {
+           transform: scale(1.2);
+           opacity: 0.6;
+         }
+       }
+
+       @keyframes phonering-alo-circle-img-anim {
+         0%, 50%, 100% {
+           transform: rotate(0) scale(1);
+         }
+         10%, 30% {
+           transform: rotate(-25deg) scale(1);
+         }
+         20%, 40% {
+           transform: rotate(25deg) scale(1);
+         }
+       }
+        .close-ring-btn {
+          position: absolute;
+            top: 15px;
+            right: -8px;
+            background-color: #d3ddfe;
+            color: #24262f;
+          font-weight: bold;
+          width: 20px;
+          height: 20px;
+          line-height: 18px;
+          text-align: center;
+          border-radius: 50%;
+          cursor: pointer;
+          font-size: 14px;
+          z-index: 1000;
+          box-shadow: 0 0 3px rgba(0,0,0,0.2);
+        }
+
+    </style>
+    <script>
+        function hideTooltipRing() {
+          const ring = document.getElementById("tooltipRing");
+          if (ring) {
+            ring.style.display = "none";
+          }
+        }
+    </script>
+
+    <script>
+        // Toggle sidebar on mobile
+        document.getElementById('sidebarCollapse ').addEventListener('click', function() {
+            document.querySelector('.sidebar').classList.toggle('active');
+            document.querySelector('.overlay').classList.toggle('active');
+        });
+
+        // Close sidebar when clicking overlay
+        document.querySelector('.overlay').addEventListener('click', function() {
+            document.querySelector('.sidebar').classList.remove('active');
+            document.querySelector('.overlay').classList.remove('active');
+        });
+    </script>
+
+    <script>
+        function formatCurrency(value) {
+            const floatValue = parseFloat(value);
+            return floatValue.toLocaleString('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        function formatCash(value) {
+            const floatValue = parseFloat(value);
+            return floatValue.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            // Định dạng các ô có class fm-currency
+            document.querySelectorAll('.fm-currency').forEach(cell => {
+                const value = parseFloat(cell.textContent.replace(/,/g, ''));
+                if (!isNaN(value)) {
+                    cell.textContent = formatCurrency(value);
+                }
+            });
+
+            // Định dạng các ô có class fm-cash
+            document.querySelectorAll('.fm-cash').forEach(cell => {
+                const value = parseFloat(cell.textContent.replace(/,/g, ''));
+                if (!isNaN(value)) {
+                    cell.textContent = formatCash(value);
+                }
+            });
+        });
+    </script>
+<!--    <div th:replace="layout/partials/_email-verify :: emailVerifyBlock"></div>-->
+
+</body>
+</html>

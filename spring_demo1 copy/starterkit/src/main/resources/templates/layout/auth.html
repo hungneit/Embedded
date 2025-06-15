@@ -1,0 +1,63 @@
+<html lang="en" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/master}">
+<body>
+
+    <!--begin::Root-->
+
+    <div layout:fragment="body" class="d-flex flex-column flex-root" id="kt_app_root">
+        <!--begin::Wrapper-->
+        <div id="bg-sign" class="d-flex justify-content-center flex-lg-row flex-column-fluid">
+            <!--begin::Body-->
+            <div class="form-login">
+
+                    <!--begin::Wrapper-->
+                    <div class="form-bg-sign mw-450px">
+                        <div class="w-100 text-center mb-4">
+                            <a href="/">
+                                <img alt="Logo" th:src="${@theme.getAssetPath('media/logos/logo-my-volecom.png')}" width="50"/>
+                            </a>
+                        </div>
+                        <!--begin::Page-->
+                        <div layout:fragment="content"></div>
+                        <!--end::Page-->
+                    </div>
+                    <!--end::Wrapper-->
+
+
+            </div>
+            <!--end::Body-->
+        </div>
+        <!--end::Wrapper-->
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                var swiper = new Swiper(".swiper-container", {
+                    loop: true, // Lặp vô hạn
+                    autoplay: {
+                        delay: 5000, // Tự động chuyển slide mỗi 5 giây
+                        disableOnInteraction: false
+                    },
+                    pagination: {
+                        el: ".swiper-pagination",
+                        clickable: true
+                    },
+                    navigation: {
+                        nextEl: ".swiper-button-next",
+                        prevEl: ".swiper-button-prev"
+                    },
+                    grabCursor: true, // Hiển thị con trỏ dạng 'grab' khi rê chuột
+                    mousewheel: {
+                        invert: false, // Giữ nguyên hướng cuộn
+                    },
+                    keyboard: {
+                        enabled: true, // Dùng bàn phím để điều khiển
+                        onlyInViewport: true
+                    },
+                });
+            });
+        </script>
+
+    </div>
+    <!--end::Root-->
+
+
+</body>
+</html>

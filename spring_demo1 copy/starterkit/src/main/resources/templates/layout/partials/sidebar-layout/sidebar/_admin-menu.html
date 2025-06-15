@@ -1,0 +1,314 @@
+<!--begin::sidebar menu-->
+<div class="app-sidebar-menu overflow-hidden flex-column-fluid">
+    <!--begin::Menu wrapper-->
+    <div id="kt_app_sidebar_menu_wrapper" class="app-sidebar-wrapper">
+        <!--begin::Scroll wrapper-->
+        <div id="kt_app_sidebar_menu_scroll" class="scroll-y mb-5 mx-3" data-kt-scroll="true"
+             data-kt-scroll-activate="true" data-kt-scroll-height="auto"
+             data-kt-scroll-dependencies="#kt_app_sidebar_logo, #kt_app_sidebar_footer"
+             data-kt-scroll-wrappers="#kt_app_sidebar_menu" data-kt-scroll-offset="5px" data-kt-scroll-save-state="true">
+            <!--begin::Menu-->
+            <div class="menu menu-column menu-rounded menu-sub-indention fw-semibold" id="#kt_app_sidebar_menu"
+                 data-kt-menu="true" data-kt-menu-expand="false">
+                <div class="title-menu-sidebar py-2">
+                    <!--begin:Menu content-->
+                    <div class="menu-content text-muted small mt-2">
+                        <i class="fa-solid fa-bars me-2"></i>
+                        <span class="menu-heading fw-bold text-uppercase fs-7">Thống kê</span>
+                    </div>
+                    <!--end:Menu content-->
+                </div>
+                <div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/admin/dashboard' ? 'menu-item-active' : ''}">
+                    <!--begin:Menu link-->
+                    <a class="menu-link" href="/admin/dashboard" >
+                        <span class="menu-icon"><i class="fa-solid fa-chart-simple"></i></span>
+                        <span class="menu-title">Dashboard</span>
+                    </a>
+                    <!--end:Menu link-->
+                </div>
+
+                <div class="title-menu-sidebar py-2">
+                    <!--begin:Menu content-->
+                    <div class="menu-content text-muted small mt-2">
+                        <i class="fa-solid fa-bars me-2"></i>
+                        <span class="menu-heading fw-bold text-uppercase fs-7">Quản lý TKQC TikTok</span>
+                    </div>
+                    <!--end:Menu content-->
+                </div>
+
+                <div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/admin/create-adaccount' ? 'menu-item-active' : ''}">
+                    <!--begin:Menu link-->
+                    <a class="menu-link" href="/admin/create-adaccount" >
+                        <span class="menu-icon"><i class="fa-solid fa-plus"></i></span>
+                        <span class="menu-title">Tạo TKQC TikTok</span>
+                    </a>
+                    <!--end:Menu link-->
+                </div>
+
+                <div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/admin/ad-account/shared-history' ? 'menu-item-active' : ''}">
+                    <!--begin:Menu link-->
+                    <a class="menu-link" href="/admin/ad-account/shared-history">
+                        <span class="menu-icon"><i class="fa-solid fa-clock-rotate-left"></i></span>
+                        <span class="menu-title">Lịch sử cấp TKQC TikTok</span>
+                    </a>
+                    <!--end:Menu link-->
+                </div>
+
+                <div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/admin/transactions-ad-account' ? 'menu-item-active' : ''}">
+                    <!--begin:Menu link-->
+                    <a class="menu-link" href="/admin/transactions-ad-account">
+                        <span class="menu-icon"><i class="fa-solid fa-chart-simple"></i></span>
+                        <span class="menu-title">Biến động số dư TKQC TikTok</span>
+
+                    </a>
+                    <!--end:Menu link-->
+                </div>
+
+
+                <div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/admin/product-warehouse' ? 'menu-item-active' : ''}">
+                    <!--begin:Menu link-->
+                    <a class="menu-link" href="/admin/product-warehouse">
+                        <span class="menu-icon"><i class="fa-brands fa-tiktok"></i></span>
+                        <span class="menu-title">Quản lý TKQC TikTok</span>
+                    </a>
+                    <!--end:Menu link-->
+                </div>
+
+                <!--end:Menu item-->
+                <!--begin:Menu item-->
+                <div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/admin/list-registered-user-account' ? 'menu-item-active' : ''}">
+                    <!--begin:Menu link-->
+                    <a class="menu-link" href="/admin/list-registered-user-account">
+                        <span class="menu-icon"><i class="fa-solid fa-square-pen"></i></span>
+
+                        <span class="menu-title">Đăng kí nhận TKQC TikTok</span>
+
+                    </a>
+                    <!--end:Menu link-->
+                </div>
+
+                <div class="title-menu-sidebar py-2">
+                    <!--begin:Menu content-->
+                    <div class="menu-content text-muted small mt-2">
+                        <i class="fa-solid fa-bars me-2"></i>
+                        <span class="menu-heading fw-bold text-uppercase fs-7">Quản lý TKQC Facebook</span>
+                    </div>
+                    <!--end:Menu content-->
+                </div>
+
+                <div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/admin/transactions-facebook-account' ? 'menu-item-active' : ''}">
+                    <!--begin:Menu link-->
+                    <a class="menu-link" href="/admin/transactions-facebook-account">
+                        <span class="menu-icon"><i class="fa-solid fa-chart-simple"></i></span>
+                        <span class="menu-title">Biến động số dư TKQC Facebook</span>
+
+                    </a>
+                    <!--end:Menu link-->
+                </div>
+                <!--end:Menu item-->
+                <div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/admin/facebook-warehouse' ? 'menu-item-active' : ''}">
+                    <!--begin:Menu link-->
+                    <a class="menu-link" href="/admin/facebook-warehouse">
+                        <span class="menu-icon"><i class="fa-brands fa-facebook"></i></span>
+                        <span class="menu-title">Quản lý TKQC Facebook</span>
+                    </a>
+                    <!--end:Menu link-->
+                </div>
+
+                <div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/admin/list-registered-user-facebook' ? 'menu-item-active' : ''}">
+                    <!--begin:Menu link-->
+                    <a class="menu-link" href="/admin/list-registered-user-facebook">
+                        <span class="menu-icon"><i class="fa-solid fa-square-pen"></i></span>
+
+                        <span class="menu-title">Đăng kí nhận TKQC Facebook</span>
+
+                    </a>
+                    <!--end:Menu link-->
+                </div>
+
+                <!--end:Menu item-->
+                <div class="title-menu-sidebar py-2">
+                    <!--begin:Menu content-->
+                    <div class="menu-content text-muted small mt-2">
+                        <i class="fa-solid fa-bars me-2"></i>
+                        <span class="menu-heading fw-bold text-uppercase fs-7">Khách hàng</span>
+                    </div>
+                    <!--end:Menu content-->
+                </div>
+                <!--end:Menu item-->
+                <!--begin:Menu item-->
+                <div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/admin/users' ? 'menu-item-active' : ''}">
+                    <!--begin:Menu link-->
+                    <a class="menu-link" href="/admin/users"
+                    >
+                        <span class="menu-icon"><i class="fa-solid fa-users"></i></span>
+                        <span class="menu-title">Danh sách khách hàng</span>
+                    </a>
+                    <!--end:Menu link-->
+                </div>
+                <!--end:Menu item-->
+                <div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/admin/assign-support' ? 'menu-item-active' : ''}">
+                    <!--begin:Menu link-->
+                    <a class="menu-link" href="/admin/assign-support">
+                        <span class="menu-icon"><i class="fa-solid fa-users-viewfinder"></i></span>
+                        <span class="menu-title">Phân công NV CSKH</span>
+                    </a>
+                    <!--end:Menu link-->
+                </div>
+                <div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/customer-care/my-list' ? 'menu-item-active' : ''}">
+                    <!--begin:Menu link-->
+                    <a class="menu-link" href="/customer-care/my-list">
+                        <span class="menu-icon"><i class="fa-solid fa-headset"></i></span>
+                        <span class="menu-title">Quản lý CSKH</span>
+                    </a>
+                    <!--end:Menu link-->
+                </div>
+                <div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/admin/customer-care-logs' ? 'menu-item-active' : ''}">
+                    <!--begin:Menu link-->
+                    <a class="menu-link" href="/admin/customer-care-logs">
+                        <span class="menu-icon"><i class="fa-solid fa-file-waveform"></i></span>
+                        <span class="menu-title">Lịch sử CSKH</span>
+                    </a>
+                    <!--end:Menu link-->
+                </div>
+                <!--begin:Menu item-->
+                <!--begin:Menu item-->
+                <div class="title-menu-sidebar py-2">
+                    <!--begin:Menu content-->
+                    <div class="menu-content text-muted small mt-2">
+                        <i class="fa-solid fa-bars me-2"></i>
+                        <span class="menu-heading fw-bold text-uppercase fs-7">Tài chính</span>
+                    </div>
+                    <!--end:Menu content-->
+                </div>
+                <!--end:Menu item-->
+                <div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/admin/invoices' ? 'menu-item-active' : ''}">
+                    <!--begin:Menu link-->
+                    <a class="menu-link" href="/admin/invoices">
+                        <span class="menu-icon"><i class="fa-solid fa-receipt"></i></span>
+                        <span class="menu-title">Hóa đơn nạp ví</span>
+                    </a>
+                    <!--end:Menu link-->
+                </div>
+                <div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/admin/topup-history' ? 'menu-item-active' : ''}">
+                    <!--begin:Menu link-->
+                    <a class="menu-link" href="/admin/topup-history">
+                        <span class="menu-icon"><i class="fa-solid fa-money-bill-trend-up"></i></span>
+
+                        <span class="menu-title">Biến động số dư ví</span>
+                    </a>
+                    <!--end:Menu link-->
+                </div>
+                <!--begin:Menu item-->
+                <div class="title-menu-sidebar py-2">
+                    <!--begin:Menu content-->
+                    <div class="menu-content text-muted small mt-2">
+                        <i class="fa-solid fa-bars me-2"></i>
+                        <span class="menu-heading fw-bold text-uppercase fs-7">Quản lý BC</span>
+                    </div>
+                    <!--end:Menu content-->
+                </div>
+                <!--end:Menu item-->
+                <!--begin:Menu item-->
+                <div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/admin/top-up-bc' ? 'menu-item-active' : ''}">
+                    <!--begin:Menu link-->
+                    <a class="menu-link"
+                       href="/admin/top-up-bc"
+                       >
+                        <span class="menu-icon"><i class="fa-solid fa-file-invoice-dollar"></i></span>
+                        <span class="menu-title">Hóa đơn nạp tiền BC</span>
+                    </a>
+                    <!--end:Menu link-->
+
+                </div>
+                <div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/admin/bcadmin-list' ? 'menu-item-active' : ''}">
+                    <!--begin:Menu link-->
+                    <a class="menu-link" href="/admin/bcadmin-list" >
+                        <span class="menu-icon"><i class="fa-solid fa-list"></i></span>
+                        <span class="menu-title">Danh sách BC tổng</span>
+                    </a>
+                    <!--end:Menu link-->
+                </div>
+
+                <div class="title-menu-sidebar py-2">
+                    <!--begin:Menu content-->
+                    <div class="menu-content text-muted small mt-2">
+                        <i class="fa-solid fa-bars me-2"></i>
+                        <span class="menu-heading fw-bold text-uppercase fs-7">QUẢN LÝ CHUNG</span>
+                    </div>
+                    <!--end:Menu content-->
+                </div>
+
+                <div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/admin/notify' ? 'menu-item-active' : ''}">
+                    <!--begin:Menu link-->
+                    <a class="menu-link" href="/admin/notify" >
+                        <span class="menu-icon"><i class="fa-solid fa-bell"></i></span>
+                        <span class="menu-title">Tạo thông báo</span>
+                    </a>
+                    <!--end:Menu link-->
+                </div>
+                <div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/admin/add-language' ? 'menu-item-active' : ''}">
+                    <!--begin:Menu link-->
+                    <a class="menu-link" href="/admin/add-language" >
+                        <span class="menu-icon"><i class="fa-solid fa-language"></i></span>
+                        <span class="menu-title">Ngôn ngữ</span>
+                    </a>
+                    <!--end:Menu link-->
+                </div>
+                <div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/admin/setting' ? 'menu-item-active' : ''}">
+                    <!--begin:Menu link-->
+                    <a class="menu-link" href="/admin/setting" >
+                        <span class="menu-icon"><i class="fa-solid fa-gear"></i></span>
+                        <span class="menu-title">Cài đặt</span>
+                    </a>
+                    <!--end:Menu link-->
+                </div>
+
+<!--                <div class="title-menu-sidebar py-2">-->
+<!--                    &lt;!&ndash;begin:Menu content&ndash;&gt;-->
+<!--                    <div class="menu-content mt-2">-->
+<!--                        <span class="menu-heading fw-bold text-uppercase fs-7">Bảo mật </span>-->
+<!--                    </div>-->
+<!--                    &lt;!&ndash;end:Menu content&ndash;&gt;-->
+<!--                </div>-->
+                <!--begin:Menu item-->
+<!--                <div class="menu-item">-->
+<!--                    &lt;!&ndash;begin:Menu link&ndash;&gt;-->
+<!--                    <a class="menu-link" href="/admin/block-ip"-->
+<!--                       >-->
+
+<!--                        <span class="menu-icon"><i class="fa-solid fa-ban"></i></span>-->
+<!--                        <span class="menu-title">Block IP</span>-->
+<!--                    </a>-->
+<!--                    &lt;!&ndash;end:Menu link&ndash;&gt;-->
+<!--                </div>-->
+
+<!--                <div class="title-menu-sidebar py-2">-->
+<!--                    &lt;!&ndash;begin:Menu content&ndash;&gt;-->
+<!--                    <div class="menu-content mt-2">-->
+<!--                        <span class="menu-heading fw-bold text-uppercase fs-7">Cài đặt hệ thống </span>-->
+<!--                    </div>-->
+<!--                    &lt;!&ndash;end:Menu content&ndash;&gt;-->
+<!--                </div>-->
+
+<!--                &lt;!&ndash;begin:Menu item&ndash;&gt;-->
+<!--                <div class="menu-item">-->
+<!--                    &lt;!&ndash;begin:Menu link&ndash;&gt;-->
+<!--                    <a class="menu-link" href="https://t.me/volecomagency"-->
+<!--                       >-->
+
+<!--                        <span class="menu-icon"><i class="fa-solid fa-shield"></i></span>-->
+<!--                        <span class="menu-title">Admin Role</span>-->
+<!--                    </a>-->
+<!--                    &lt;!&ndash;end:Menu link&ndash;&gt;-->
+<!--                </div>-->
+                <!--end:Menu item-->
+
+            </div>
+            <!--end::Menu-->
+        </div>
+        <!--end::Scroll wrapper-->
+    </div>
+    <!--end::Menu wrapper-->
+</div>
+<!--end::sidebar menu-->

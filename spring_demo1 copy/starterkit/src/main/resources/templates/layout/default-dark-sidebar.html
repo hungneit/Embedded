@@ -1,0 +1,31 @@
+<html lang="en" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="~{layout/master}">
+<body>
+    <!--begin::App-->
+    <div layout:fragment="body" class="d-flex flex-column flex-root app-root" id="kt_app_root">
+        <!--begin::Page-->
+        <div class="app-page flex-column flex-column-fluid" id="kt_app_page">
+            <div th:replace="${@theme.getView('partials/sidebar-layout/_header.html')}"></div>
+            <!--begin::Wrapper-->
+            <div class="row flex-nowrap g-0" id="kt_app_wrapper">
+                <div th:replace="${@theme.getView('partials/sidebar-layout/_sidebar.html')}"></div>
+                <!--begin::Main-->
+                <div class="col content w-50" id="kt_app_main">
+                    <!--begin::Content container-->
+                    <div layout:fragment="content"></div>
+                    <!--end::Content wrapper-->
+                </div>
+                <!--end:::Main-->
+            </div>
+            <!--end::Wrapper-->
+            
+            <!-- Overlay for mobile -->
+            <div class="overlay"></div>
+        </div>
+        <!--end::Page-->
+    </div>
+    <!--end::App-->
+
+    <div layout:fragment="offcanvas">
+    </div>
+</body>
+</html>

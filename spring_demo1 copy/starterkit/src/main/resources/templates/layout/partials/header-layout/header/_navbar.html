@@ -1,0 +1,33 @@
+<!--begin::Navbar-->
+<div class="app-navbar flex-shrink-0">
+	<!--begin::Chat-->
+	<div class="app-navbar-item ms-1 ms-md-4">
+		<!--begin::Menu wrapper-->
+		<a class="header-admin-contact" href="https://t.me/volecomagency" target="_blank">
+			<div class="header-admin-icon">
+				[(${@theme.getIcon("message-text-2", "fs-2")})]
+			</div>
+			<p class="header-admin-text">Contact Admin</p>
+		</a>
+
+		<!--end::Menu wrapper-->
+	</div>
+	<!--end::Chat-->
+
+
+	<!--begin::Admin btton-->
+	<div th:if="${isAdmin}" class="app-navbar-item ms-1 ms-md-4">
+		<a href="/admin/dashboard" class="btn btn-danger">Admin</a>
+	</div>
+	<!--end::Admin button-->
+
+	<!--begin::Header menu toggle-->
+	<div class="app-navbar-item d-lg-none ms-2 me-n2" title="Show header menu">
+		<div class="btn btn-flex btn-icon btn-active-color-primary w-30px h-30px" id="kt_app_header_menu_toggle">
+			[(${@theme.getIcon("element-4", "fs-1")})]
+
+		</div>
+	</div>
+	<!--end::Header menu toggle-->
+</div>
+<!--end::Navbar-->

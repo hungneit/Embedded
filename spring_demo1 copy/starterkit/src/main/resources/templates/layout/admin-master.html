@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout" th:attr="__${@theme.printHtmlAttributes('html')}__">
+
+<head>
+    <title>Volecom Admin</title>
+    <meta charset="utf-8" />
+    <meta name="description" content="" />
+    <meta name="keywords" content="" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="" />
+    <!-- Clipboard -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.11/clipboard.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="icon" type="image/png" href="/assets/media/logos/logo-my-volecom.png"/>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <!-- Bootstrap JS + Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-eR+zU+3+7F+5HvR6t0jW2xqklJ9ZfU2ClAjlwh0o3ylxQwBSAyoacJFDx5TUpnHg" crossorigin="anonymous"></script>
+
+    <!--begin::Fonts-->
+    <link th:each="font: ${@theme.getFonts()}" rel="stylesheet" th:href="@{${font}}" />
+    <!--end::Fonts-->
+
+    <!--begin::Vendor Stylesheets(optional)-->
+    <link th:each="file: ${@theme.getVendors('Css')}" rel="stylesheet" type="text/css" th:href="@{${file}}" />
+    <!--end::Vendor Stylesheets-->
+
+    <!--begin::Global Stylesheets(mandatory)-->
+    <link th:each="file: ${@theme.getGlobalAssets('Css')}" rel="stylesheet" type="text/css" th:href="@{${file}}" />
+    <!--end::Global Stylesheets-->
+
+    <!--begin::Custom Stylesheets(optional)-->
+    <link th:each="file: ${@theme.getCssFiles()}" rel="stylesheet" type="text/css" th:href="@{${@theme.getAssetPath(file)}}" />
+    <!--end::Custom Stylesheets-->
+    <!-- SweetAlert2 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Cute Alert -->
+    <link class="main-stylesheet" href="https://cdn.jsdelivr.net/npm/cute-alert@1.0.0/style.css" rel="stylesheet" type="text/css">
+    <script src="https://cdn.jsdelivr.net/npm/cute-alert@1.0.0/cute-alert.js"></script>
+
+    <!-- Simple Notify CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/simple-notify@1.0.4/dist/simple-notify.css" />
+
+    <!-- Simple Notify JS -->
+    <script src="https://cdn.jsdelivr.net/npm/simple-notify@1.0.4/dist/simple-notify.min.js"></script>
+
+
+
+    <!-- Flatpickr CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+    <!-- Notyf CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css">
+
+    <!-- Fancybox CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+    <!-- Fancybox JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fancybox/3.5.7/jquery.fancybox.min.js"></script>
+
+    <!-- Summernote CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-bs4.min.css" rel="stylesheet">
+
+
+
+</head>
+<!--end::Head-->
+
+<body th:attr="__${@theme.printHtmlAttributes('body')}__" th:class="${@theme.printHtmlClasses('body')}">
+<th:block th:replace="partials/theme-mode/_init.html"></th:block>
+
+<th:block layout:fragment="body"></th:block>
+
+<th:block layout:fragment="offcanvas"></th:block>
+
+<!--begin::Global Javascript(mandatory)-->
+<script th:each="file: ${@theme.getGlobalAssets('Js')}" th:src="${file}"></script>
+<!--end::Global Javascript-->
+
+<!--begin::Vendors Javascript(optional)-->
+<script th:each="file: ${@theme.getVendors('Js')}" th:src="${file}"></script>
+<!--end::Vendors Javascript-->
+
+<!--begin::Custom Javascript(optional)-->
+<script th:each="file: ${@theme.getJavascriptFiles()}" th:src="${@theme.getAssetPath(file)}"></script>
+<!--end::Custom Javascript-->
+<!-- Summernote JS -->
+<script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-bs4.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        let links = document.querySelectorAll(".menu-item");
+        let currentPath = window.location.pathname; // Lấy đường dẫn trang hiện tại
+
+        links.forEach(link => {
+            if (link.href.includes(currentPath)) {
+                link.classList.add("menu-item-active");
+            }
+        });
+    });
+
+
+</script>
+
+<script>
+    // Toggle sidebar on mobile
+    document.getElementById('sidebarCollapse ').addEventListener('click', function() {
+        document.querySelector('.sidebar').classList.toggle('active');
+        document.querySelector('.overlay').classList.toggle('active');
+    });
+
+    // Close sidebar when clicking overlay
+    document.querySelector('.overlay').addEventListener('click', function() {
+        document.querySelector('.sidebar').classList.remove('active');
+        document.querySelector('.overlay').classList.remove('active');
+    });
+</script>
+<script>
+    function formatCurrency(value) {
+        const floatValue = parseFloat(value);
+        return floatValue.toLocaleString('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+    function formatCash(value) {
+        const floatValue = parseFloat(value);
+        return floatValue.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        // Định dạng các ô có class fm-currency
+        document.querySelectorAll('.fm-currency').forEach(cell => {
+            const value = parseFloat(cell.textContent.replace(/,/g, ''));
+            if (!isNaN(value)) {
+                cell.textContent = formatCurrency(value);
+            }
+        });
+
+        // Định dạng các ô có class fm-cash
+        document.querySelectorAll('.fm-cash').forEach(cell => {
+            const value = parseFloat(cell.textContent.replace(/,/g, ''));
+            if (!isNaN(value)) {
+                cell.textContent = formatCash(value);
+            }
+        });
+    });
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+</body>
+</html>

@@ -1,0 +1,641 @@
+<!-- ========== templates/index.html ========== -->
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gas Monitoring System</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- WebSocket -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+
+    <style>
+        .tab-active { @apply border-b-2 border-blue-500 text-blue-600 bg-blue-50; }
+        .status-safe { @apply bg-green-100 text-green-800; }
+        .status-warning { @apply bg-yellow-100 text-yellow-800; }
+        .status-danger { @apply bg-orange-100 text-orange-800; }
+        .status-critical { @apply bg-red-100 text-red-800; }
+        .status-offline { @apply bg-gray-100 text-gray-800; }
+        .pulse-dot { @apply animate-pulse bg-green-400 w-3 h-3 rounded-full; }
+        .offline-dot { @apply bg-red-400 w-3 h-3 rounded-full animate-pulse; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+<!-- Header -->
+<header class="bg-white shadow-sm border-b">
+    <div class="max-w-7xl mx-auto px-4 py-4">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">🔥 Gas Monitoring System</h1>
+                <p class="text-gray-600">Real-time gas sensor monitoring</p>
+            </div>
+            <div class="flex items-center space-x-4">
+                <!-- Connection Status -->
+                <div class="flex items-center">
+                    <div id="connectionDot" class="offline-dot mr-2"></div>
+                    <span id="connectionStatus" class="text-sm text-gray-600">Connecting...</span>
+                </div>
+                <!-- Last Update -->
+                <div class="text-sm text-gray-500">
+                    Last update: <span id="lastUpdate">--:--</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Main Container -->
+<div class="max-w-7xl mx-auto px-4 py-6">
+
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-lg p-4 shadow-sm">
+            <div class="text-2xl font-bold text-blue-600" th:text="${statusCounts.SAFE ?: 0}">0</div>
+            <div class="text-sm text-gray-600">Safe</div>
+        </div>
+        <div class="bg-white rounded-lg p-4 shadow-sm">
+            <div class="text-2xl font-bold text-yellow-600" th:text="${statusCounts.WARNING ?: 0}">0</div>
+            <div class="text-sm text-gray-600">Warning</div>
+        </div>
+        <div class="bg-white rounded-lg p-4 shadow-sm">
+            <div class="text-2xl font-bold text-orange-600" th:text="${statusCounts.DANGER ?: 0}">0</div>
+            <div class="text-sm text-gray-600">Danger</div>
+        </div>
+        <div class="bg-white rounded-lg p-4 shadow-sm">
+            <div class="text-2xl font-bold text-red-600" th:text="${statusCounts.CRITICAL ?: 0}">0</div>
+            <div class="text-sm text-gray-600">Critical</div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+        <form id="filterForm" class="flex flex-wrap gap-4 items-end">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Device ID</label>
+                <input type="text" id="deviceFilter" name="device" placeholder="Filter by device..."
+                       th:value="${deviceFilter}"
+                       class="border border-gray-300 rounded-lg px-3 py-2 w-48">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select id="statusFilter" name="status" class="border border-gray-300 rounded-lg px-3 py-2">
+                    <option value="">All Status</option>
+                    <option value="SAFE" th:selected="${statusFilter == 'SAFE'}">Safe</option>
+                    <option value="WARNING" th:selected="${statusFilter == 'WARNING'}">Warning</option>
+                    <option value="DANGER" th:selected="${statusFilter == 'DANGER'}">Danger</option>
+                    <option value="CRITICAL" th:selected="${statusFilter == 'CRITICAL'}">Critical</option>
+                </select>
+            </div>
+            <div class="flex space-x-2">
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                    🔍 Filter
+                </button>
+                <button type="button" onclick="clearFilters()" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700">
+                    🗑️ Clear
+                </button>
+                <button type="button" onclick="refreshData()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+                    🔄 Refresh
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tabs -->
+    <div class="bg-white rounded-lg shadow-sm">
+        <!-- Tab Headers -->
+        <div class="border-b border-gray-200">
+            <nav class="flex space-x-0">
+                <button onclick="switchTab('realtime')" id="tab-realtime" class="tab-active px-6 py-3 text-sm font-medium">
+                    📊 Real-time Status
+                </button>
+                <button onclick="switchTab('history')" id="tab-history" class="px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-700">
+                    📋 History Data
+                </button>
+                <button onclick="switchTab('alerts')" id="tab-alerts" class="px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-700">
+                    🚨 Alerts
+                </button>
+                <button onclick="switchTab('chart')" id="tab-chart" class="px-6 py-3 text-sm font-medium text-gray-500 hover:text-gray-700">
+                    📈 Charts
+                </button>
+            </nav>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="p-6">
+
+            <!-- Real-time Status Tab -->
+            <div id="content-realtime" class="tab-content">
+                <h3 class="text-lg font-semibold mb-4">Current Device Status</h3>
+                <div id="realtimeGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+                    <!-- Real-time cards will be populated here -->
+                    <div th:if="${latestData.empty}" class="col-span-full text-center py-8 text-gray-500">
+                        <div class="text-4xl mb-2">📡</div>
+                        <p>No devices connected</p>
+                    </div>
+
+                    <!-- Device Cards -->
+                    <div th:each="device : ${latestData}" class="bg-gray-50 rounded-lg p-4 border">
+                        <div class="flex justify-between items-start mb-3">
+                            <h4 class="font-semibold text-gray-900" th:text="${device.deviceId}">Device ID</h4>
+                            <div class="flex items-center">
+                                <div th:class="${device.online} ? 'pulse-dot' : 'offline-dot'" class="mr-2"></div>
+                                <span class="px-2 py-1 text-xs font-medium rounded-full"
+                                      th:classappend="'status-' + ${device.statusColor}"
+                                      th:text="${device.gasStatus}">Status</span>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Gas:</span>
+                                <span class="font-semibold" th:text="${device.gasValue} + ' ppm'">-- ppm</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">System:</span>
+                                <span th:text="${device.systemStatus}">--</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Relay:</span>
+                                <span th:text="${device.relayStatus}">--</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">WiFi:</span>
+                                <span th:text="${device.wifiRssi} + ' dBm'">-- dBm</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Updated:</span>
+                                <span th:text="${#temporals.format(device.timestamp, 'HH:mm:ss')}">--:--</span>
+                            </div>
+                        </div>
+
+                        <div th:if="${device.urgent}" class="mt-3 p-2 bg-red-100 border border-red-200 rounded text-red-800 text-xs font-medium">
+                            🚨 URGENT: <span th:text="${device.alertLevel}">Alert</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Data Tab -->
+            <div id="content-history" class="tab-content hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">Historical Data</h3>
+                    <div class="text-sm text-gray-500">
+                        Showing <span th:text="${gasData.numberOfElements}">0</span> of
+                        <span th:text="${gasData.totalElements}">0</span> records
+                    </div>
+                </div>
+
+                <!-- History Table -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Device</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Gas (ppm)</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">System</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Relay</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Alert</th>
+                        </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                        <tr th:if="${gasData.content.empty}">
+                            <td colspan="7" class="px-4 py-8 text-center text-gray-500">No data found</td>
+                        </tr>
+                        <tr th:each="record : ${gasData.content}" class="hover:bg-gray-50">
+                            <td class="px-4 py-3 text-sm text-gray-900"
+                                th:text="${#temporals.format(record.timestamp, 'MM-dd HH:mm:ss')}">Time</td>
+                            <td class="px-4 py-3 text-sm font-medium text-gray-900" th:text="${record.deviceId}">Device</td>
+                            <td class="px-4 py-3 text-sm text-gray-900" th:text="${record.gasValue}">Gas</td>
+                            <td class="px-4 py-3">
+                                        <span class="px-2 py-1 text-xs font-medium rounded-full"
+                                              th:classappend="'status-' + ${record.statusColor}"
+                                              th:text="${record.gasStatus}">Status</span>
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-900" th:text="${record.systemStatus}">System</td>
+                            <td class="px-4 py-3 text-sm text-gray-900" th:text="${record.relayStatus}">Relay</td>
+                            <td class="px-4 py-3 text-sm">
+                                <span th:if="${record.urgent}" class="text-red-600 font-medium">🚨</span>
+                                <span th:unless="${record.urgent}" class="text-gray-400">-</span>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div th:if="${gasData.totalPages > 1}" class="mt-4 flex justify-between items-center">
+                    <div class="text-sm text-gray-500">
+                        Page <span th:text="${currentPage + 1}">1</span> of <span th:text="${gasData.totalPages}">1</span>
+                    </div>
+                    <div class="flex space-x-2">
+                        <a th:if="${currentPage > 0}"
+                           th:href="@{/(page=${currentPage - 1}, device=${deviceFilter}, status=${statusFilter})}"
+                           class="px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50">Previous</a>
+                        <a th:if="${currentPage < gasData.totalPages - 1}"
+                           th:href="@{/(page=${currentPage + 1}, device=${deviceFilter}, status=${statusFilter})}"
+                           class="px-3 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50">Next</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alerts Tab -->
+            <div id="content-alerts" class="tab-content hidden">
+                <h3 class="text-lg font-semibold mb-4">Recent Alerts (Last 24 Hours)</h3>
+
+                <div class="space-y-3">
+                    <div th:if="${recentAlerts.empty}" class="text-center py-8 text-gray-500">
+                        <div class="text-4xl mb-2">✅</div>
+                        <p>No recent alerts</p>
+                        <p class="text-sm">All systems normal</p>
+                    </div>
+
+                    <div th:each="alert : ${recentAlerts}" class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-2 mb-2">
+                                        <span class="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full"
+                                              th:text="${alert.alertLevel ?: 'ALERT'}">Alert Level</span>
+                                    <span class="text-sm text-gray-600" th:text="${alert.deviceId}">Device</span>
+                                    <span class="text-xs text-gray-500"
+                                          th:text="${#temporals.format(alert.timestamp, 'MM-dd HH:mm:ss')}">Time</span>
+                                </div>
+                                <p class="text-sm text-gray-900">
+                                    Gas level: <span class="font-semibold" th:text="${alert.gasValue} + ' ppm'">-- ppm</span>
+                                </p>
+                                <p class="text-xs text-gray-600">
+                                    System: <span th:text="${alert.systemStatus}">--</span> |
+                                    Relay: <span th:text="${alert.relayStatus}">--</span>
+                                </p>
+                            </div>
+                            <button onclick="dismissAlert(this)" class="text-gray-400 hover:text-gray-600">
+                                ✕
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Tab -->
+            <div id="content-chart" class="tab-content hidden">
+                <h3 class="text-lg font-semibold mb-4">Gas Level Trends</h3>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Real-time Chart -->
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h4 class="font-medium text-gray-900 mb-3">Real-time Gas Levels</h4>
+                        <div class="h-64">
+                            <canvas id="realtimeChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Status Distribution -->
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h4 class="font-medium text-gray-900 mb-3">Status Distribution</h4>
+                        <div class="h-64">
+                            <canvas id="statusChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Alert Toast Container -->
+<div id="alertContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+<!-- JavaScript -->
+<script th:inline="javascript">
+    // Global variables
+    let stompClient = null;
+    let realtimeChart = null;
+    let statusChart = null;
+    let realtimeData = [];
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        connectWebSocket();
+        initializeCharts();
+        loadRealtimeData();
+    });
+
+    // Tab switching
+    function switchTab(tabName) {
+        // Hide all tab contents
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.add('hidden');
+        });
+
+        // Remove active class from all tabs
+        document.querySelectorAll('[id^="tab-"]').forEach(tab => {
+            tab.classList.remove('tab-active');
+            tab.classList.add('text-gray-500', 'hover:text-gray-700');
+        });
+
+        // Show selected tab content
+        document.getElementById('content-' + tabName).classList.remove('hidden');
+
+        // Activate selected tab
+        const activeTab = document.getElementById('tab-' + tabName);
+        activeTab.classList.add('tab-active');
+        activeTab.classList.remove('text-gray-500', 'hover:text-gray-700');
+
+        // Initialize charts if chart tab is selected
+        if (tabName === 'chart') {
+            setTimeout(() => {
+                initializeCharts();
+            }, 100);
+        }
+    }
+
+    // WebSocket connection
+    function connectWebSocket() {
+        const socket = new SockJS('/ws');
+        stompClient = Stomp.over(socket);
+
+        stompClient.connect({}, function(frame) {
+            console.log('Connected: ' + frame);
+            updateConnectionStatus(true);
+
+            // Subscribe to real-time updates
+            stompClient.subscribe('/topic/gas-data', function(message) {
+                const data = JSON.parse(message.body);
+                handleRealtimeUpdate(data);
+            });
+
+        }, function(error) {
+            console.log('Connection error:', error);
+            updateConnectionStatus(false);
+            // Retry connection
+            setTimeout(connectWebSocket, 5000);
+        });
+    }
+
+    function updateConnectionStatus(connected) {
+        const dot = document.getElementById('connectionDot');
+        const status = document.getElementById('connectionStatus');
+
+        if (connected) {
+            dot.className = 'pulse-dot mr-2';
+            status.textContent = 'Connected';
+        } else {
+            dot.className = 'offline-dot mr-2';
+            status.textContent = 'Disconnected';
+        }
+    }
+
+    function handleRealtimeUpdate(data) {
+        updateRealtimeDisplay(data);
+        updateCharts(data);
+        updateLastUpdateTime();
+
+        // Show alert if urgent
+        if (data.urgent) {
+            showAlert(data);
+        }
+    }
+
+    function updateRealtimeDisplay(data) {
+        // Update real-time cards
+        const grid = document.getElementById('realtimeGrid');
+        let card = grid.querySelector(`[data-device="${data.deviceId}"]`);
+
+        if (!card) {
+            // Create new card
+            card = createDeviceCard(data);
+            grid.appendChild(card);
+        } else {
+            // Update existing card
+            updateDeviceCard(card, data);
+        }
+    }
+
+    function createDeviceCard(data) {
+        const cardDiv = document.createElement('div');
+        cardDiv.setAttribute('data-device', data.deviceId);
+        cardDiv.className = 'bg-gray-50 rounded-lg p-4 border';
+        cardDiv.innerHTML = getCardHTML(data);
+        return cardDiv;
+    }
+
+    function updateDeviceCard(card, data) {
+        card.innerHTML = getCardHTML(data);
+    }
+
+    function getCardHTML(data) {
+        const statusClass = getStatusClass(data.gasStatus);
+        const dotClass = data.stm32Connected ? 'pulse-dot' : 'offline-dot';
+
+        return `
+                <div class="flex justify-between items-start mb-3">
+                    <h4 class="font-semibold text-gray-900">${data.deviceId}</h4>
+                    <div class="flex items-center">
+                        <div class="${dotClass} mr-2"></div>
+                        <span class="px-2 py-1 text-xs font-medium rounded-full ${statusClass}">
+                            ${data.gasStatus}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Gas:</span>
+                        <span class="font-semibold">${data.gasValue || '--'} ppm</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">System:</span>
+                        <span>${data.systemStatus || '--'}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Relay:</span>
+                        <span>${data.relayStatus || '--'}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">WiFi:</span>
+                        <span>${data.wifiRssi || '--'} dBm</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Updated:</span>
+                        <span>${new Date().toLocaleTimeString()}</span>
+                    </div>
+                </div>
+
+                ${data.urgent ? `
+                <div class="mt-3 p-2 bg-red-100 border border-red-200 rounded text-red-800 text-xs font-medium">
+                    🚨 URGENT: ${data.alertLevel || 'Alert'}
+                </div>
+                ` : ''}
+            `;
+    }
+
+    function getStatusClass(status) {
+        switch(status) {
+            case 'SAFE': return 'status-safe';
+            case 'WARNING': return 'status-warning';
+            case 'DANGER': return 'status-danger';
+            case 'CRITICAL': return 'status-critical';
+            default: return 'status-offline';
+        }
+    }
+
+    function updateLastUpdateTime() {
+        document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+    }
+
+    function showAlert(data) {
+        const container = document.getElementById('alertContainer');
+        const alertDiv = document.createElement('div');
+
+        alertDiv.className = 'bg-red-500 text-white px-4 py-3 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full';
+        alertDiv.innerHTML = `
+                <div class="flex justify-between items-center">
+                    <div>
+                        <div class="font-bold">${data.alertLevel || 'ALERT'}</div>
+                        <div class="text-sm">${data.deviceId}: ${data.gasValue} ppm</div>
+                    </div>
+                    <button onclick="this.parentElement.parentElement.remove()" class="text-white hover:text-gray-200">
+                        ✕
+                    </button>
+                </div>
+            `;
+
+        container.appendChild(alertDiv);
+
+        // Animate in
+        setTimeout(() => alertDiv.classList.remove('translate-x-full'), 100);
+
+        // Auto remove
+        setTimeout(() => {
+            if (alertDiv.parentElement) {
+                alertDiv.classList.add('translate-x-full');
+                setTimeout(() => alertDiv.remove(), 300);
+            }
+        }, 10000);
+    }
+
+    // Charts
+    function initializeCharts() {
+        initRealtimeChart();
+        initStatusChart();
+    }
+
+    function initRealtimeChart() {
+        const ctx = document.getElementById('realtimeChart');
+        if (!ctx) return;
+
+        if (realtimeChart) realtimeChart.destroy();
+
+        realtimeChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Gas Level (ppm)',
+                    data: [],
+                    borderColor: 'rgb(59, 130, 246)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+
+    function initStatusChart() {
+        const ctx = document.getElementById('statusChart');
+        if (!ctx) return;
+
+        if (statusChart) statusChart.destroy();
+
+        const statusCounts = /*[[${statusCounts}]]*/ {};
+
+        statusChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Safe', 'Warning', 'Danger', 'Critical'],
+                datasets: [{
+                    data: [
+                        statusCounts.SAFE || 0,
+                        statusCounts.WARNING || 0,
+                        statusCounts.DANGER || 0,
+                        statusCounts.CRITICAL || 0
+                    ],
+                    backgroundColor: [
+                        'rgb(34, 197, 94)',
+                        'rgb(234, 179, 8)',
+                        'rgb(249, 115, 22)',
+                        'rgb(239, 68, 68)'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+    }
+
+    function updateCharts(data) {
+        if (realtimeChart && data.gasValue !== undefined) {
+            realtimeChart.data.labels.push(new Date().toLocaleTimeString());
+            realtimeChart.data.datasets[0].data.push(data.gasValue);
+
+            // Keep only last 50 points
+            if (realtimeChart.data.labels.length > 50) {
+                realtimeChart.data.labels.shift();
+                realtimeChart.data.datasets[0].data.shift();
+            }
+
+            realtimeChart.update();
+        }
+    }
+
+    function loadRealtimeData() {
+        fetch('/api/latest')
+            .then(response => response.json())
+            .then(data => {
+                data.forEach(item => updateRealtimeDisplay(item));
+            })
+            .catch(error => console.error('Error loading realtime data:', error));
+    }
+
+    // Filter functions
+    function clearFilters() {
+        document.getElementById('deviceFilter').value = '';
+        document.getElementById('statusFilter').value = '';
+        document.getElementById('filterForm').submit();
+    }
+
+    function refreshData() {
+        location.reload();
+    }
+
+    function dismissAlert(button) {
+        button.closest('.bg-red-50').remove();
+    }
+
+    // Auto refresh every 30 seconds
+    setInterval(loadRealtimeData, 30000);
+</script>
+</body>
+</html>

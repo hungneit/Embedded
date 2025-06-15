@@ -1,0 +1,334 @@
+<!--begin::sidebar menu-->
+<div class="app-sidebar-menu overflow-hidden flex-column-fluid" xmlns:th="http://www.w3.org/1999/xhtml">
+	<!--begin::Menu wrapper-->
+	<div id="kt_app_sidebar_menu_wrapper" class="app-sidebar-wrapper">
+		<!--begin::Scroll wrapper-->
+
+		<div id="kt_app_sidebar_menu_scroll" class="scroll-y mb-5 mx-3 pb-5" data-kt-scroll="true"
+			data-kt-scroll-activate="true" data-kt-scroll-height="auto"
+			data-kt-scroll-dependencies="#kt_app_sidebar_logo, #kt_app_sidebar_footer"
+			data-kt-scroll-wrappers="#kt_app_sidebar_menu" data-kt-scroll-offset="5px" data-kt-scroll-save-state="true">
+
+
+
+			<div th:if="${isAuthenticated}" class="wallet-container-slidebar">
+
+				<div class="avatar-slidebar">
+					<a href="/profile">
+						<img class="avatar-slidebar-img" th:src="${@theme.getAssetPath('media/avatars/300-3.jpg')}" alt="user" />
+					</a>
+				</div>
+				<div class="my-wallet-slidebar d-flex flex-column align-items-center p-2">
+
+					<div class="d-flex align-items-center">
+						<span th:if="${user != null}" class="text-uppercase fw-bold" th:text="${users.username}"></span>
+						<span th:if="${user == null}"  class="text-uppercase fw-bold"th:text="${users.username}"></span>
+						<i class="fa-solid fa-circle-check ms-1" style="color: #309bea"
+						   th:if="${users.emailVerified == true}"
+						   data-bs-placement="top"
+						   data-bs-toggle="tooltip"
+						   title="Verified"></i>
+					</div>
+					<div class="d-flex align-items-center">
+						<span th:if="${user != null}" class="balance-slidebar" th:text="'$' + ${users.balance}"></span>
+						<span th:if="${user == null}" class="balance-slidebar" th:text="'$' + ${users.balance}">$0.00</span>
+					</div>
+
+				</div>
+			</div>
+			<div th:if="${!isAuthenticated}">
+				<div class="avatar-slidebar m-2">
+					<a href="/profile">
+						<img class="avatar-slidebar-img" th:src="${@theme.getAssetPath('media/avatars/blank.png')}" alt="user" />
+					</a>
+				</div>
+				<a href="/sign-in" class="btn-login-slidebar" th:text="#{Sign In}">Sign In</a>
+			</div>
+
+			<div class="menu menu-column menu-rounded menu-sub-indention fw-bold" id="#kt_app_sidebar_menu"
+				data-kt-menu="true" data-kt-menu-expand="false">
+
+				<div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/' ? 'menu-item-active' : ''}" >
+					<a class="menu-link" href="/">
+						<span class="menu-icon"><i class="fa-solid fa-house-chimney"></i></span>
+						<span class="menu-title" th:text="#{Overview}">Overview</span>
+					</a>
+				</div>
+
+				<!-- TikTok Menu -->
+				<div class="mb-2" th:with="isTikTokActive=${#httpServletRequest.requestURI == '/ad-account/my-tiktok-ad-accounts'}">
+					<div class="menu-item">
+						<a class="menu-link position-relative"
+						   data-bs-toggle="collapse"
+						   href="#tiktokMenu"
+						   role="button"
+						   aria-controls="tiktokMenu"
+						   th:classappend="${isTikTokActive ? '' : 'collapsed'}"
+						   th:attr="aria-expanded=${isTikTokActive ? 'true' : 'false'}">
+							<span class="menu-icon"><i class="fa-brands fa-tiktok"></i></span>
+							<span class="menu-title" th:text="#{My TikTok Accounts}">My TikTok Accounts</span>
+							<span class="position-absolute end-0 me-3 menu-arrow-icon"><i class="fa-solid fa-angle-down"></i></span>
+						</a>
+					</div>
+					<div class="collapse" id="tiktokMenu"
+						 th:classappend="${isTikTokActive ? ' show' : ''}">
+						<ul class="ps-4">
+							<li class="menu-item">
+								<a href="/ad-account/my-tiktok-ad-accounts?tab=manage-account" class="menu-link"
+								   th:classappend="${#httpServletRequest.requestURI == '/ad-account/my-tiktok-ad-accounts' and #httpServletRequest.getParameter('tab') == 'manage-account' ? 'menu-item-active' : ''}">
+									<span class="menu-icon"><i class="fa-solid fa-gear"></i></span>
+									<span class="menu-title" th:text="#{Manage Account}">Manage Account</span>
+								</a>
+							</li>
+							<li class="menu-item">
+								<a href="/ad-account/my-tiktok-ad-accounts?tab=request-account" class="menu-link"
+								   th:classappend="${#httpServletRequest.requestURI == '/ad-account/my-tiktok-ad-accounts' and #httpServletRequest.getParameter('tab') == 'request-account' ? 'menu-item-active' : ''}">
+									<span class="menu-icon"><i class="fa-solid fa-plus-circle"></i></span>
+									<span class="menu-title" th:text="#{Request Account}">Request Account</span>
+								</a>
+							</li>
+							<li class="menu-item">
+								<a href="/ad-account/my-tiktok-ad-accounts?tab=list-request" class="menu-link"
+								   th:classappend="${#httpServletRequest.requestURI == '/ad-account/my-tiktok-ad-accounts' and #httpServletRequest.getParameter('tab') == 'list-request' ? 'menu-item-active' : ''}">
+									<span class="menu-icon"><i class="fa-solid fa-list"></i></span>
+									<span class="menu-title" th:text="#{List Requests}">List Requests</span>
+								</a>
+							</li>
+						</ul>
+					</div>
+				</div>
+
+				<!-- Facebook Menu -->
+				<div class="mb-2" th:with="isFacebookActive=${#httpServletRequest.requestURI == '/ad-account/my-facebook-ad-accounts'}">
+					<div class="menu-item">
+						<a class="menu-link position-relative"
+						   data-bs-toggle="collapse"
+						   href="#facebookMenu"
+						   role="button"
+						   aria-controls="facebookMenu"
+						   th:classappend="${isFacebookActive ? '' : 'collapsed'}"
+						   th:attr="aria-expanded=${isFacebookActive ? 'true' : 'false'}">
+							<span class="menu-icon"><i class="fa-brands fa-facebook"></i></span>
+							<span class="menu-title" th:text="#{My Facebook Accounts}">My Facebook Accounts</span>
+							<span class="position-absolute end-0 me-3 menu-arrow-icon"><i class="fa-solid fa-angle-down"></i></span>
+						</a>
+					</div>
+					<div class="collapse" id="facebookMenu"
+						 th:classappend="${isFacebookActive ? ' show' : ''}">
+						<ul class="ps-4">
+							<li class="menu-item">
+								<a href="/ad-account/my-facebook-ad-accounts?tab=manage-account" class="menu-link"
+								   th:classappend="${#httpServletRequest.requestURI == '/ad-account/my-facebook-ad-accounts' and #httpServletRequest.getParameter('tab') == 'manage-account' ? 'menu-item-active' : ''}">
+									<span class="menu-icon"><i class="fa-solid fa-gear"></i></span>
+									<span class="menu-title" th:text="#{Manage Account}">Manage Account</span>
+								</a>
+							</li>
+							<li class="menu-item">
+								<a href="/ad-account/my-facebook-ad-accounts?tab=request-account" class="menu-link"
+								   th:classappend="${#httpServletRequest.requestURI == '/ad-account/my-facebook-ad-accounts' and #httpServletRequest.getParameter('tab') == 'request-account' ? 'menu-item-active' : ''}">
+									<span class="menu-icon"><i class="fa-solid fa-plus-circle"></i></span>
+									<span class="menu-title" th:text="#{Request Account}">Request Account</span>
+								</a>
+							</li>
+							<li class="menu-item">
+								<a href="/ad-account/my-facebook-ad-accounts?tab=list-request" class="menu-link"
+								   th:classappend="${#httpServletRequest.requestURI == '/ad-account/my-facebook-ad-accounts' and #httpServletRequest.getParameter('tab') == 'list-request' ? 'menu-item-active' : ''}">
+									<span class="menu-icon"><i class="fa-solid fa-list"></i></span>
+									<span class="menu-title" th:text="#{List Requests}">List Requests</span>
+								</a>
+							</li>
+						</ul>
+					</div>
+				</div>
+
+				<!-- Google Menu -->
+<!--				<div class="mb-2" th:with="isGoogleActive=${#httpServletRequest.requestURI == '/ad-account/my-google-ad-accounts'}">-->
+<!--					<div class="menu-item">-->
+<!--						<a class="menu-link position-relative"-->
+<!--						   data-bs-toggle="collapse"-->
+<!--						   href="#googleMenu"-->
+<!--						   role="button"-->
+<!--						   aria-controls="googleMenu"-->
+<!--						   th:classappend="${isGoogleActive ? '' : 'collapsed'}"-->
+<!--						   th:attr="aria-expanded=${isGoogleActive ? 'true' : 'false'}">-->
+<!--							<span class="menu-icon"><i class="fa-brands fa-google"></i></span>-->
+<!--							<span class="menu-title" th:text="#{My Google Accounts}">My Google Accounts</span>-->
+<!--							<span class="position-absolute end-0 me-3 menu-arrow-icon"><i class="fa-solid fa-angle-down"></i></span>-->
+<!--						</a>-->
+<!--					</div>-->
+<!--					-->
+<!--					<div class="collapse" id="googleMenu"-->
+<!--						 th:classappend="${isGoogleActive ? ' show' : ''}">-->
+<!--						<ul class="ps-4">-->
+<!--							<li class="menu-item">-->
+<!--								<a href="/ad-account/my-google-ad-accounts?tab=manage-account" class="menu-link"-->
+<!--								   th:classappend="${#httpServletRequest.requestURI == '/ad-account/my-google-ad-accounts' and #httpServletRequest.getParameter('tab') == 'manage-account' ? 'menu-item-active' : ''}">-->
+<!--									<span class="menu-icon"><i class="fa-solid fa-gear"></i></span>-->
+<!--									<span class="menu-title" th:text="#{Manage Account}">Manage Account</span>-->
+<!--								</a>-->
+<!--							</li>-->
+<!--							<li class="menu-item">-->
+<!--								<a href="/ad-account/my-google-ad-accounts?tab=request-account" class="menu-link"-->
+<!--								   th:classappend="${#httpServletRequest.requestURI == '/ad-account/my-google-ad-accounts' and #httpServletRequest.getParameter('tab') == 'request-account' ? 'menu-item-active' : ''}">-->
+<!--									<span class="menu-icon"><i class="fa-solid fa-plus-circle"></i></span>-->
+<!--									<span class="menu-title" th:text="#{Request Account}">Request Account</span>-->
+<!--								</a>-->
+<!--							</li>-->
+<!--							<li class="menu-item">-->
+<!--								<a href="/ad-account/my-google-ad-accounts?tab=list-request" class="menu-link"-->
+<!--								   th:classappend="${#httpServletRequest.requestURI == '/ad-account/my-google-ad-accounts' and #httpServletRequest.getParameter('tab') == 'list-request' ? 'menu-item-active' : ''}">-->
+<!--									<span class="menu-icon"><i class="fa-solid fa-list"></i></span>-->
+<!--									<span class="menu-title" th:text="#{List Requests}">List Requests</span>-->
+<!--								</a>-->
+<!--							</li>-->
+<!--						</ul>-->
+<!--					</div>-->
+<!--				</div>-->
+
+				<div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/top-up-wallet' ? 'menu-item-active' : ''}">
+					<!--begin:Menu link-->
+					<a class="menu-link" href="/top-up-wallet">
+						<span class="menu-icon"><i class="fa-solid fa-wallet"></i></span>
+						<span class="menu-title" th:text="#{Top-up Wallet}"></span>
+					</a>
+					<!--end:Menu link-->
+				</div>
+
+				<div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/profile' ? 'menu-item-active' : ''}">
+					<!--begin:Menu link-->
+					<a class="menu-link" href="/profile">
+						<span class="menu-icon"><i class="fa-solid fa-user"></i></span>
+						<span class="menu-title" th:text="#{Profile}"></span>
+					</a>
+					<!--end:Menu link-->
+				</div>
+
+				<div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/contact' ? 'menu-item-active' : ''}">
+					<!--begin:Menu link-->
+					<a class="menu-link" href="/contact">
+						<span class="menu-icon"><i class="fa-solid fa-phone"></i></span>
+						<span class="menu-title" th:text="#{Contact}"></span>
+					</a>
+					<!--end:Menu link-->
+				</div>
+
+				<div class="menu-item" th:if="${isAdmin}" >
+					<a class="menu-link" href="/admin/hello">
+						<span class="menu-icon"><i class="fa-solid fa-toolbox"></i></span>
+						<span class="menu-title">Admin</span>
+					</a>
+				</div>
+				<div class="menu-item" th:if="${isSupport}" >
+					<a class="menu-link" href="/admin/hello">
+						<span class="menu-icon"><i class="fa-solid fa-toolbox"></i></span>
+						<span class="menu-title">System</span>
+					</a>
+				</div>
+<!--				<div data-kt-menu-trigger="click" class="menu-item menu-accordion">-->
+<!--					&lt;!&ndash;begin:Menu link&ndash;&gt;-->
+<!--					<span class="menu-link">-->
+<!--						<span class="menu-icon"><i class="fa-solid fa-handshake-simple"></i></span>-->
+<!--						<span class="menu-title">Partner</span>-->
+<!--						<span class="menu-arrow"></span>-->
+<!--					</span>-->
+<!--					&lt;!&ndash;end:Menu link&ndash;&gt;-->
+<!--					&lt;!&ndash;begin:Menu sub&ndash;&gt;-->
+<!--					<div class="menu-sub menu-sub-accordion">-->
+<!--						&lt;!&ndash;begin:Menu item&ndash;&gt;-->
+<!--						<div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/white-label' ? 'menu-item-active' : ''}">-->
+<!--							&lt;!&ndash;begin:Menu link&ndash;&gt;-->
+<!--							<a class="menu-link" href="/white-label">-->
+<!--								<span class="menu-bullet">-->
+<!--									<span class="bullet bullet-dot"></span>-->
+<!--								</span>-->
+<!--								<span class="menu-title">White Label</span>-->
+<!--							</a>-->
+<!--							&lt;!&ndash;end:Menu link&ndash;&gt;-->
+<!--						</div>-->
+
+<!--						<div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/strategic-partner' ? 'menu-item-active' : ''}">-->
+<!--							&lt;!&ndash;begin:Menu link&ndash;&gt;-->
+<!--							<a class="menu-link" href="/strategic-partner">-->
+<!--								<span class="menu-bullet">-->
+<!--									<span class="bullet bullet-dot"></span>-->
+<!--								</span>-->
+<!--								<span class="menu-title">Strategic Partner</span>-->
+<!--							</a>-->
+<!--							&lt;!&ndash;end:Menu link&ndash;&gt;-->
+<!--						</div>-->
+
+<!--						<div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/help-center' ? 'menu-item-active' : ''}">-->
+<!--							&lt;!&ndash;begin:Menu link&ndash;&gt;-->
+<!--							<a class="menu-link" href="#">-->
+<!--								<span class="menu-bullet">-->
+<!--									<span class="bullet bullet-dot"></span>-->
+<!--								</span>-->
+<!--								<span class="menu-title">Help Center</span>-->
+<!--							</a>-->
+<!--							&lt;!&ndash;end:Menu link&ndash;&gt;-->
+<!--						</div>-->
+<!--					</div>-->
+<!--					&lt;!&ndash;end:Menu sub&ndash;&gt;-->
+<!--				</div>-->
+
+<!--				<div data-kt-menu-trigger="click" class="menu-item menu-accordion">-->
+<!--					&lt;!&ndash;begin:Menu link&ndash;&gt;-->
+<!--					<span class="menu-link">-->
+<!--						<span class="menu-icon"><i class="fa-solid fa-building"></i></span>-->
+<!--						<span class="menu-title">Company</span>-->
+<!--						<span class="menu-arrow"></span>-->
+<!--					</span>-->
+<!--					&lt;!&ndash;end:Menu link&ndash;&gt;-->
+<!--					&lt;!&ndash;begin:Menu sub&ndash;&gt;-->
+<!--					<div class="menu-sub menu-sub-accordion">-->
+<!--						&lt;!&ndash;begin:Menu item&ndash;&gt;-->
+<!--						<div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/about' ? 'menu-item-active' : ''}">-->
+<!--							&lt;!&ndash;begin:Menu link&ndash;&gt;-->
+<!--							<a class="menu-link" href="/about">-->
+<!--								<span class="menu-bullet">-->
+<!--									<span class="bullet bullet-dot"></span>-->
+<!--								</span>-->
+<!--								<span class="menu-title">About Volecom</span>-->
+<!--							</a>-->
+<!--							&lt;!&ndash;end:Menu link&ndash;&gt;-->
+<!--						</div>-->
+<!--						&lt;!&ndash;end:Menu item&ndash;&gt;-->
+<!--						&lt;!&ndash;begin:Menu item&ndash;&gt;-->
+<!--						<div class="menu-item" th:classappend="${#httpServletRequest.requestURI == '/terms-policy' ? 'menu-item-active' : ''}">-->
+<!--							&lt;!&ndash;begin:Menu link&ndash;&gt;-->
+<!--							<a class="menu-link" href="#">-->
+<!--								<span class="menu-bullet">-->
+<!--									<span class="bullet bullet-dot"></span>-->
+<!--								</span>-->
+<!--								<span class="menu-title">Terms and Policy</span>-->
+<!--							</a>-->
+<!--							&lt;!&ndash;end:Menu link&ndash;&gt;-->
+<!--						</div>-->
+<!--						&lt;!&ndash;end:Menu item&ndash;&gt;-->
+<!--						&lt;!&ndash;begin:Menu item&ndash;&gt;-->
+<!--						<div class="menu-item" >-->
+<!--							&lt;!&ndash;begin:Menu link&ndash;&gt;-->
+<!--							<a class="menu-link" href="#">-->
+<!--								<span class="menu-bullet">-->
+<!--									<span class="bullet bullet-dot"></span>-->
+<!--								</span>-->
+<!--								<span class="menu-title">Blogs</span>-->
+<!--							</a>-->
+<!--							&lt;!&ndash;end:Menu link&ndash;&gt;-->
+<!--						</div>-->
+
+<!--					</div>-->
+<!--					&lt;!&ndash;end:Menu sub&ndash;&gt;-->
+<!--				</div>-->
+
+
+			</div>
+			<!--end::Menu-->
+
+		</div>
+		<!--end::Scroll wrapper-->
+
+	</div>
+	<!--end::Menu wrapper-->
+</div>
+<!--end::sidebar menu-->

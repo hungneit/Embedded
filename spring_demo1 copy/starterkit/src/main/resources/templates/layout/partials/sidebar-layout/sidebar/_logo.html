@@ -1,0 +1,25 @@
+<div class="app-sidebar-logo" id="kt_app_sidebar_logo" xmlns:th="http://www.w3.org/1999/xhtml">
+	<!--begin::Logo image-->
+	<div class="sidebar-logo">
+		<a href="/">
+			<img alt="Logo" src="/assets/media/logos/logo-my-volecom.png" class="app-sidebar-logo-default" width="45px">
+			<span class="fw-bolder text-dark logo-sidebar">VOL</span><span class="fw-bolder logo-sidebar" style="color: #44b6f6;">ECOM</span>
+		</a>
+
+	</div>
+
+	<div class="language-selector">
+		<button class="language-btn" id="language-toggle">
+			<img id="selected-lang-flag" src="https://flagcdn.com/w160/gb.png" alt="Lang Flag" class="flag-icon">
+<!--			<span id="selected-lang">English</span>-->
+		</button>
+		<ul class="language-dropdown" id="language-dropdown" style="display: none;">
+			<li th:each="lang : ${languages}"
+				th:attr="data-lang=${lang.code}, data-flag=${'https://flagcdn.com/w160/' + lang.flag + '.png'}">
+				<img th:src="${'https://flagcdn.com/w160/' + lang.flag + '.png'}" alt="Lang Flag" class="flag-icon">
+				<span th:text="${lang.name}">Language Name</span>
+			</li>
+		</ul>
+
+	</div>
+</div>

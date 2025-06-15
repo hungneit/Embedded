@@ -1,0 +1,495 @@
+<div th:fragment="emailVerifyBlock">
+  <div th:if="${#authentication?.principal instanceof T(com.theme.starterkit.security.UserPrincipal)}">
+    <!-- Email Verification Modal -->
+    <div class="modal fade" id="emailVerifyModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden p-0">
+          <!-- Modal Header with Gradient -->
+          <div class="modal-header text-white border-0 py-3" style="background: linear-gradient(to right, #1e86d4, #03aef7);">
+            <h5 class="modal-title fs-5 d-flex align-items-center">
+              <i class="fas fa-envelope-circle-check me-2 fa-bounce"></i>
+              <span th:text="#{Verify Your Email}"></span>
+            </h5>
+<!--            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>-->
+          </div>
+
+          <!-- Modal Body -->
+          <div class="modal-body p-4">
+            <!-- Alert Message -->
+            <div class="alert alert-danger bg-danger-subtle border-0 rounded-3 d-flex align-items-center mb-4 fade show" role="alert">
+              <i class="fas fa-circle-exclamation me-3 fs-4 text-danger fa-beat-fade" style="--fa-beat-fade-opacity: 0.67; --fa-beat-fade-scale: 1.075;"></i>
+              <div class="text-danger fw-medium" th:text="#{Please verify your email address to access all features.}">
+              </div>
+            </div>
+
+            <!-- Tabs Navigation -->
+            <ul class="nav nav-pills nav-fill mb-4" id="verifyTab" role="tablist">
+              <li class="nav-item" role="presentation">
+                <button class="nav-link active rounded-pill d-flex align-items-center justify-content-center"
+                        id="current-tab"
+                        data-bs-toggle="tab"
+                        data-bs-target="#verifyCurrent"
+                        type="button"
+                        role="tab">
+                  <i class="fas fa-check-circle me-2"></i><span th:text="#{Verify Email}"></span>
+                </button>
+              </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link rounded-pill d-flex align-items-center justify-content-center"
+                        id="new-tab"
+                        data-bs-toggle="tab"
+                        data-bs-target="#verifyNew"
+                        type="button"
+                        role="tab">
+                  <i class="fas fa-pen-to-square me-2"></i><span th:text="#{Update Email}"></span>
+                </button>
+              </li>
+            </ul>
+
+            <!-- Tab Contents -->
+            <div class="tab-content" id="verifyTabContent">
+              <!-- Current Email Tab -->
+              <div class="tab-pane fade show active" id="verifyCurrent" role="tabpanel">
+                <div class="text-center mb-4">
+                  <div class="mb-3">
+                    <span class="fs-6 text-secondary" th:text="#{Current Email:}"></span>
+                    <span class="fs-5 fw-semibold ms-1" th:text="${#authentication?.principal instanceof T(com.theme.starterkit.security.UserPrincipal) ? #authentication.principal.email : ''}">user@example.com</span>
+                  </div>
+                  <p class="text-muted mb-4" th:text="#{A verification link will be sent to your current email address.}"></p>
+                </div>
+                <div class="d-grid">
+                  <button type="button" class="btn btn-send btn-lg position-relative overflow-hidden" id="resendVerifyLinkBtn">
+                    <span class="d-flex align-items-center justify-content-center">
+                      <i class="fas fa-paper-plane me-2"></i>
+                      <span th:text="#{Send Verification Link}"></span>
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- New Email Tab -->
+              <div class="tab-pane fade" id="verifyNew" role="tabpanel">
+                <form id="emailVerifyForm" class="needs-validation" novalidate>
+                  <div class="form-floating mb-4">
+                    <input type="email" class="form-control form-control-lg" id="newEmail"
+                           placeholder="name@example.com"
+                           required />
+                    <label for="newEmail">
+                      <i class="fas fa-at me-1 text-primary"></i>
+                      <span th:text="#{New Email Address}"></span>
+                    </label>
+                    <div class="invalid-feedback">
+                      <i class="fas fa-triangle-exclamation me-1"></i>
+                      <span th:text="#{Please enter a valid email address}"></span>
+                    </div>
+                    <div class="form-text">
+                      <i class="fas fa-info-circle me-1"></i>
+                      <span th:text="#{We will send a verification link to this new address}"></span>
+                    </div>
+                  </div>
+                  <div class="d-grid">
+                    <button type="submit" class="btn btn-gradient-success btn-lg" id="updateEmailBtn">
+                      <span class="d-flex align-items-center justify-content-center">
+                        <i class="fas fa-arrow-right-to-bracket me-2"></i>
+                        <span th:text="#{Update & Send Verification}"></span>
+                      </span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <!-- Success Message Area -->
+            <div id="verifyEmailMessage" class="alert alert-success bg-success-subtle border-0 rounded-3 mt-4 mb-0 d-none">
+              <div class="d-flex align-items-center">
+                <div class="me-3">
+                  <i class="fas fa-circle-check fs-3 text-success fa-bounce"></i>
+                </div>
+                <div>
+                  <h6 class="alert-heading text-success fw-semibold mb-1" th:text="#{Verification link sent!}"></h6>
+                  <p class="mb-0"><span th:text="#{Verification link has been sent to:}"></span> <span class="fw-semibold" id="sentEmailAddress">email@example.com</span></p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Modal Footer with Help Link -->
+          <div class="modal-footer bg-light justify-content-center border-top-0 py-3">
+            <span class="text-muted">
+              <i class="fas fa-question-circle me-1"></i>
+              <span th:text="#{Having trouble?}"></span><a href="#" class="link-primary text-decoration-none ms-1" th:text="#{Get help}"></a>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add required CSS -->
+    <style>
+      /* Custom gradient backgrounds */
+      .bg-gradient-primary {
+        background: linear-gradient(135deg, #4d6bed, #264ed9);
+      }
+
+      .btn-gradient-success {
+        background: linear-gradient(135deg, #00a0ff, #0052a1);
+        border: none;
+        color: white;
+        transition: all 0.3s ease;
+      }
+
+      .btn-gradient-success:hover {
+        background: linear-gradient(135deg, #027dc5, #003c75);
+        box-shadow: 0 5px 15px rgb(46 160 184 / 40%);
+        transform: translateY(-2px);
+        color: white;
+      }
+
+      /* Button hover effects */
+      .btn-primary {
+        transition: all 0.3s ease;
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(13, 110, 253, 0.4);
+      }
+
+      /* Tab transitions */
+      .tab-pane {
+        transition: all 0.3s ease;
+      }
+
+      /* Custom animations for showing success message */
+      @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .slide-down {
+        animation: slideDown 0.5s ease forwards;
+      }
+
+      .form-floating>.form-control:not(:placeholder-shown) {
+        padding: 40px 10px 20px;
+      }
+      .nav-link {
+        color: #1b91dd;
+        font-weight: 500;
+      }
+      .nav-pills .nav-link.active, .nav-pills .show>.nav-link {
+        color: #fff;
+        background-color: #1b91dd;
+      }
+      .btn-send {
+        background: linear-gradient(135deg, #09abf4, #1d87d5);
+        border: none;
+        color: white;
+        transition: all 0.3s ease;
+      }
+
+      .btn-send:hover {
+        background: linear-gradient(135deg, #05a0e4, #127cca);
+        box-shadow: 0 5px 15px rgb(46 160 184 / 40%);
+        transform: translateY(-2px);
+        color: white;
+      }
+
+    </style>
+
+    <!-- Email Verification Modal JavaScript -->
+    <script th:inline="javascript">
+      document.addEventListener("DOMContentLoaded", function () {
+        // ======= MODAL INITIALIZATION =======
+        // Show modal if email not verified
+        const isLoggedIn = /*[[${#authentication?.principal instanceof T(com.theme.starterkit.security.UserPrincipal)}]]*/ false;
+        const emailVerified = /*[[${#authentication?.principal?.emailVerified}]]*/ false;
+        const roles = /*[[${#authentication?.principal?.roles}]]*/ [];
+        const isUser = roles.includes("USER");
+
+        // Khởi tạo modal với Bootstrap
+        const emailVerifyModal = document.getElementById("emailVerifyModal");
+        let modalInstance = null;
+
+        if (emailVerifyModal) {
+          modalInstance = new bootstrap.Modal(emailVerifyModal, {
+            backdrop: 'static',
+            keyboard: false
+          });
+
+          // Hiển thị modal nếu người dùng chưa xác thực email
+          if (isLoggedIn && isUser && !emailVerified) {
+            modalInstance.show();
+          }
+        }
+
+        // ======= SETUP VARIABLES & STATE =======
+        // Get the form element and buttons
+        const form = document.getElementById('emailVerifyForm');
+        const resendBtn = document.getElementById('resendVerifyLinkBtn');
+        const updateBtn = document.getElementById('updateEmailBtn');
+        const messageBox = document.getElementById('verifyEmailMessage');
+
+        // Store original button texts
+        const resendBtnOriginalText = '<span class="d-flex align-items-center justify-content-center"><i class="fas fa-paper-plane me-2"></i>Send Verification Link</span>';
+        const updateBtnOriginalText = '<span class="d-flex align-items-center justify-content-center"><i class="fas fa-arrow-right-to-bracket me-2"></i>Update & Send Verification</span>';
+
+        // Flag to track if countdown is active
+        let isCountdownActive = false;
+
+        // ======= BUTTON HANDLERS =======
+        // Add submit event handler for the form
+        if (form) {
+          form.addEventListener('submit', function (event) {
+            event.preventDefault();
+
+            if (!form.checkValidity()) {
+              event.stopPropagation();
+              form.classList.add('was-validated');
+              return;
+            }
+
+            // Only proceed if countdown is not active
+            if (!isCountdownActive) {
+              const email = document.getElementById('newEmail').value.trim();
+
+              // Set active state
+              isCountdownActive = true;
+              disableButtons(true);
+              updateBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Processing...';
+
+              // Send actual AJAX request to update email
+              fetch("/email-verification/update-email?newEmail=" + encodeURIComponent(email), {
+                method: "POST",
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+              })
+                      .then(res => res.json())
+                      .then(data => {
+                        if (data.error === "WAIT_BEFORE_RESEND") {
+                          showErrorMessage("Please wait before requesting another verification email.");
+                          isCountdownActive = false;
+                          disableButtons(false);
+                          updateBtn.innerHTML = updateBtnOriginalText;
+                          return;
+                        }
+
+                        showSuccessMessage(data.message || "Verification link sent to new email.", email);
+                        startCountdown(updateBtn, 60, updateBtnOriginalText);
+                      })
+                      .catch(() => {
+                        showErrorMessage("Failed to update and send link.");
+                        isCountdownActive = false;
+                        disableButtons(false);
+                        updateBtn.innerHTML = updateBtnOriginalText;
+                      });
+
+            }
+          });
+        }
+
+        // Handle resend button click
+        if (resendBtn) {
+          resendBtn.addEventListener('click', function () {
+            // Only proceed if countdown is not active
+            if (!isCountdownActive) {
+              // Set active state
+              isCountdownActive = true;
+              disableButtons(true);
+              resendBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Sending...';
+
+              // Send actual AJAX request
+              fetch("/email-verification/send", {
+                method: "POST",
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+              })
+                      .then(res => res.json())
+                      .then(data => {
+                        if (data.error === "WAIT_BEFORE_RESEND") {
+                          showErrorMessage("Please wait before requesting another verification email.");
+                          // Enable buttons immediately
+                          isCountdownActive = false;
+                          disableButtons(false);
+                          resendBtn.innerHTML = resendBtnOriginalText;
+                          return;
+                        }
+
+                        // Success
+                        const emailElement = document.querySelector('.tab-pane.active .fw-semibold');
+                        const currentEmail = emailElement ? emailElement.textContent.trim() : '';
+                        showSuccessMessage(data.message || "Verification link sent.", currentEmail);
+                        startCountdown(resendBtn, 60, resendBtnOriginalText);
+                      })
+                      .catch(() => {
+                        showErrorMessage("Failed to send verification link.");
+                        isCountdownActive = false;
+                        disableButtons(false);
+                        resendBtn.innerHTML = resendBtnOriginalText;
+                      });
+
+            }
+          });
+        }
+
+        // ======= HELPER FUNCTIONS =======
+        // Function to disable/enable both buttons
+        function disableButtons(disabled) {
+          if (resendBtn) resendBtn.disabled = disabled;
+          if (updateBtn) updateBtn.disabled = disabled;
+        }
+
+        // Countdown function for buttons
+        function startCountdown(activeButton, seconds, originalText) {
+          let remainingTime = seconds;
+
+          // Update button text to show countdown
+          activeButton.innerHTML = `<i class="fas fa-clock me-2"></i> Resend in ${remainingTime}s`;
+
+          // Create interval for countdown
+          const countdownTimer = setInterval(() => {
+            remainingTime--;
+
+            if (remainingTime <= 0) {
+              // Reset buttons when countdown reaches zero
+              clearInterval(countdownTimer);
+              isCountdownActive = false;
+              disableButtons(false);
+              activeButton.innerHTML = originalText;
+            } else {
+              // Update countdown text
+              activeButton.innerHTML = `<i class="fas fa-clock me-2"></i> Resend in ${remainingTime}s`;
+            }
+          }, 1000);
+        }
+
+        // Show success message function
+        function showSuccessMessage(message, emailAddress) {
+          if (messageBox) {
+            // Reset message box styles in case it was previously an error
+            messageBox.classList.remove('alert-danger', 'bg-danger-subtle');
+            messageBox.classList.add('alert-success', 'bg-success-subtle');
+
+            // Update icon
+            const icon = messageBox.querySelector('i');
+            if (icon) {
+              icon.classList.remove('fa-circle-exclamation', 'text-danger');
+              icon.classList.add('fa-circle-check', 'text-success', 'fa-bounce');
+            }
+
+            // Update heading
+            const messageHeading = messageBox.querySelector('.alert-heading');
+            if (messageHeading) {
+              messageHeading.textContent = "Verification sent!";
+              messageHeading.classList.remove('text-danger');
+              messageHeading.classList.add('text-success');
+            }
+
+            // Set the email in the success message
+            const emailSpan = messageBox.querySelector('#sentEmailAddress');
+            if (emailSpan && emailAddress) {
+              emailSpan.textContent = emailAddress;
+            }
+
+            // Update message text if provided
+            const messagePara = messageBox.querySelector('p');
+            if (messagePara && message) {
+              messagePara.innerHTML = `Verification link has been sent to: <span class="fw-semibold" id="sentEmailAddress">${emailAddress}</span>`;
+            }
+
+            // Show the message with animation
+            messageBox.classList.remove('d-none');
+            messageBox.style.opacity = 0;
+            messageBox.style.transform = 'translateY(-20px)';
+
+            setTimeout(() => {
+              messageBox.style.transition = 'all 0.5s ease';
+              messageBox.style.opacity = 1;
+              messageBox.style.transform = 'translateY(0)';
+            }, 50);
+          }
+        }
+
+        // Show error message
+        function showErrorMessage(message) {
+          if (messageBox) {
+            // Change the styling for error messages
+            messageBox.classList.remove('alert-success', 'bg-success-subtle');
+            messageBox.classList.add('alert-danger', 'bg-danger-subtle');
+
+            // Remove bounce animation and change icon color
+            const icon = messageBox.querySelector('i');
+            if (icon) {
+              icon.classList.remove('fa-circle-check', 'text-success', 'fa-bounce');
+              icon.classList.add('fa-circle-exclamation', 'text-danger');
+            }
+
+            // Update heading
+            const messageHeading = messageBox.querySelector('.alert-heading');
+            if (messageHeading) {
+              messageHeading.textContent = "Error!";
+              messageHeading.classList.remove('text-success');
+              messageHeading.classList.add('text-danger');
+            }
+
+            // Update message text
+            const messagePara = messageBox.querySelector('p');
+            if (messagePara) {
+              messagePara.textContent = message;
+            }
+
+            // Show with animation
+            messageBox.classList.remove('d-none');
+            messageBox.style.opacity = 0;
+            messageBox.style.transform = 'translateY(-20px)';
+
+            setTimeout(() => {
+              messageBox.style.transition = 'all 0.5s ease';
+              messageBox.style.opacity = 1;
+              messageBox.style.transform = 'translateY(0)';
+            }, 50);
+          }
+        }
+
+        // ======= TAB TRANSITIONS =======
+        // Setup tab transitions
+        const triggerTabList = [].slice.call(document.querySelectorAll('#verifyTab button'));
+        triggerTabList.forEach(function (triggerEl) {
+          triggerEl.addEventListener('click', function (event) {
+            // Update active tab
+            triggerTabList.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+
+            // Add animation to the tabs
+            const currentActiveTab = document.querySelector('.tab-pane.show.active');
+            if (currentActiveTab) {
+              currentActiveTab.style.opacity = 0;
+
+              setTimeout(() => {
+                // Hide all tabs
+                document.querySelectorAll('.tab-pane').forEach(pane => {
+                  pane.classList.remove('show', 'active');
+                });
+
+                // Show target tab
+                const targetTab = document.querySelector(this.getAttribute('data-bs-target'));
+                if (targetTab) {
+                  targetTab.classList.add('show', 'active');
+                  targetTab.style.opacity = 0;
+                  setTimeout(() => {
+                    targetTab.style.opacity = 1;
+                  }, 50);
+                }
+              }, 200);
+            }
+          });
+        });
+
+        // Function để hiển thị modal từ bên ngoài
+        window.showEmailVerificationModal = function() {
+          if (modalInstance) {
+            modalInstance.show();
+          }
+        };
+      });
+    </script>
+  </div>
+</div>

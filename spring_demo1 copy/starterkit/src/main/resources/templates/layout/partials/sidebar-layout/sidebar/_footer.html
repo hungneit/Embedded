@@ -1,0 +1,35 @@
+<div class="app-sidebar-footer flex-column-auto pb-6 px-6" id="kt_app_sidebar_footer">
+    <!-- Kiểm tra trạng thái đăng nhập -->
+    <div th:if="${isAuthenticated}" style="bottom: 16px;width: 212px;position: absolute;left: 50%;transform: translateX(-50%);">
+        <a href="/logout" class="btn btn-flex flex-center btn-logout overflow-hidden text-nowrap px-0 h-40px w-100"
+           onclick="handleLogout(event)">
+            <span class="menu-icon"><i class="fa-solid fa-power-off"></i></span>
+            <span class="btn-label ms-1" th:text="#{Log out}"></span>
+
+        </a>
+    </div>
+    <div th:if="${!isAuthenticated}">
+        <!-- Không hiển thị gì nếu chưa đăng nhập -->
+    </div>
+</div>
+
+<script>
+    function handleLogout(event) {
+        event.preventDefault(); // ✅ Ngăn chặn hành động mặc định của thẻ <a>
+
+        // ✅ Xóa trạng thái đăng nhập khỏi localStorage
+        localStorage.removeItem("isLoggedIn");
+
+        // ✅ Nếu có JWT, xóa luôn
+        // localStorage.removeItem("jwt_token");
+
+        // ✅ Gửi request logout đến server (nếu có API logout)
+        fetch("/logout", { method: "POST", credentials: "include" })
+            .then(() => {
+                window.location.href = "/"; // ✅ Chuyển hướng về trang chính sau khi logout
+            })
+            .catch(() => {
+                window.location.href = "/"; // Nếu có lỗi, vẫn chuyển hướng về trang chính
+            });
+    }
+</script>
