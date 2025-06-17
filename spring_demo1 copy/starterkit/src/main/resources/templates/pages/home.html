@@ -37,17 +37,6 @@
                 <h1 class="text-2xl font-bold text-gray-900">🔥 Gas Monitoring System</h1>
                 <p class="text-gray-600">Real-time gas sensor monitoring</p>
             </div>
-            <div class="flex items-center space-x-4">
-                <!-- Connection Status -->
-                <div class="flex items-center">
-                    <div id="connectionDot" class="offline-dot mr-2"></div>
-                    <span id="connectionStatus" class="text-sm text-gray-600">Connecting...</span>
-                </div>
-                <!-- Last Update -->
-                <div class="text-sm text-gray-500">
-                    Last update: <span id="lastUpdate">--:--</span>
-                </div>
-            </div>
         </div>
     </div>
 </header>
@@ -143,7 +132,10 @@
                     </div>
 
                     <!-- Device Cards -->
-                    <div th:each="device : ${latestData}" class="bg-gray-50 rounded-lg p-4 border">
+                    <div th:each="device : ${latestData}"
+                         class="bg-gray-50 rounded-lg p-4 border"
+                         th:attr="data-device=${device.deviceId}, data-timestamp=${#temporals.format(device.timestamp, 'yyyyMMddHHmmss')}">
+
                         <div class="flex justify-between items-start mb-3">
                             <h4 class="font-semibold text-gray-900" th:text="${device.deviceId}">Device ID</h4>
                             <div class="flex items-center">
@@ -396,15 +388,34 @@
     }
 
     function handleRealtimeUpdate(data) {
-        updateRealtimeDisplay(data);
-        updateCharts(data);
-        updateLastUpdateTime();
+        const grid = document.getElementById('realtimeGrid');
+        const deviceId = data.deviceId;
+        const card = grid.querySelector(`[data-device="${deviceId}"]`);
+        const newTimestamp = new Date(data.timestamp).getTime();
 
-        // Show alert if urgent
-        if (data.urgent) {
-            showAlert(data);
+        if (card) {
+            const oldTimestamp = parseInt(card.getAttribute('data-timestamp')) || 0;
+
+            // Nếu dữ liệu không thay đổi, thì KHÔNG cập nhật
+            if (newTimestamp <= oldTimestamp) {
+                console.log(`No update for ${deviceId}, timestamp unchanged.`);
+                return;
+            }
+
+            // Cập nhật timestamp và nội dung
+            card.setAttribute('data-timestamp', newTimestamp);
+            updateDeviceCard(card, data);
+        } else {
+            // Tạo card mới
+            const newCard = createDeviceCard(data);
+            newCard.setAttribute('data-device', deviceId);
+            newCard.setAttribute('data-timestamp', newTimestamp);
+            grid.appendChild(newCard);
         }
     }
+
+
+
 
     function updateRealtimeDisplay(data) {
         // Update real-time cards
@@ -424,10 +435,12 @@
     function createDeviceCard(data) {
         const cardDiv = document.createElement('div');
         cardDiv.setAttribute('data-device', data.deviceId);
+        cardDiv.setAttribute('data-timestamp', new Date(data.timestamp).getTime());
         cardDiv.className = 'bg-gray-50 rounded-lg p-4 border';
         cardDiv.innerHTML = getCardHTML(data);
         return cardDiv;
     }
+
 
     function updateDeviceCard(card, data) {
         card.innerHTML = getCardHTML(data);
@@ -467,7 +480,8 @@
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-600">Updated:</span>
-                        <span>${new Date().toLocaleTimeString()}</span>
+                        <span>${new Date(data.timestamp).toLocaleTimeString()}</span>
+
                     </div>
                 </div>
 

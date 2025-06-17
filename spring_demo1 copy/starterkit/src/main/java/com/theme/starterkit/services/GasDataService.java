@@ -1,6 +1,5 @@
 package com.theme.starterkit.services;
 
-import com.theme.starterkit.dto.GasSensorDataRequest;
 import com.theme.starterkit.entities.GasData;
 import com.theme.starterkit.repositories.GasDataRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,9 +7,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Service;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
 
+import javax.transaction.Transactional;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -28,11 +29,7 @@ public class GasDataService {
 
     public GasData saveData(Map<String, Object> requestData) {
         GasData data = new GasData();
-
-        // Device ID
         data.setDeviceId((String) requestData.get("device_id"));
-
-        // Timestamp
         Object timestamp = requestData.get("timestamp");
         if (timestamp instanceof Number) {
             data.setTimestamp(LocalDateTime.ofInstant(
@@ -42,7 +39,6 @@ public class GasDataService {
             data.setTimestamp(LocalDateTime.now());
         }
 
-        // Integer fields (with null check)
         Object gasVal = requestData.get("gas_value");
         if (gasVal instanceof Number) data.setGasValue(((Number) gasVal).intValue());
 
@@ -56,7 +52,6 @@ public class GasDataService {
         Object uptime = requestData.get("uptime");
         if (uptime instanceof Number) data.setUptime(((Number) uptime).longValue());
 
-        // Boolean fields (handle int/bool)
         Object stm32 = requestData.get("stm32_connected");
         if (stm32 instanceof Boolean) {
             data.setStm32Connected((Boolean) stm32);
@@ -75,15 +70,12 @@ public class GasDataService {
 
         data.setAlertLevel((String) requestData.get("alert_level"));
 
-        // Save to DB
         GasData saved = repository.save(data);
 
-        // WebSocket (if needed)
         messagingTemplate.convertAndSend("/topic/gas-data", saved);
 
         return saved;
     }
-
 
     public Page<GasData> getAllData(int page, int size, String deviceFilter, String statusFilter) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("timestamp").descending());
@@ -115,5 +107,18 @@ public class GasDataService {
                 "DANGER", repository.countByStatus("DANGER"),
                 "CRITICAL", repository.countByStatus("CRITICAL")
         );
+    }
+
+    // Delete data older than 24 hours
+    @Transactional
+    public void deleteOldData() {
+        LocalDateTime cutoff = LocalDateTime.now().minusHours(24);
+        repository.deleteByTimestampBefore(cutoff);
+    }
+
+    @Transactional
+    @Scheduled(fixedRate = 3600000) // Run every hour
+    public void scheduleOldDataDeletion() {
+        deleteOldData();
     }
 }
