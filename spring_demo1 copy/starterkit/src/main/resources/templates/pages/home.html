@@ -8,6 +8,7 @@
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -314,6 +315,42 @@
     let realtimeChart = null;
     let statusChart = null;
     let realtimeData = [];
+    function parseTimestamp(rawTimestamp) {
+        if (!rawTimestamp) return Date.now();
+
+        // Nếu định dạng là yyyyMMddHHmmss
+        if (/^\d{14}$/.test(rawTimestamp)) {
+            const year = rawTimestamp.slice(0, 4);
+            const month = rawTimestamp.slice(4, 6);
+            const day = rawTimestamp.slice(6, 8);
+            const hour = rawTimestamp.slice(8, 10);
+            const minute = rawTimestamp.slice(10, 12);
+            const second = rawTimestamp.slice(12, 14);
+
+            const isoString = `${year}-${month}-${day}T${hour}:${minute}:${second}`;
+            const parsed = new Date(isoString);
+            const millis = parsed.getTime();
+            if (isNaN(millis)) {
+                console.warn('[PARSE ERROR] Invalid timestamp:', rawTimestamp);
+                return Date.now();
+            }
+            return millis;
+        }
+
+        // Xử lý chuẩn: định dạng "2025-06-17 20:38:45.080295"
+        const clean = rawTimestamp.split('.')[0].replace(' ', 'T');
+        const parsed = new Date(clean);
+        const millis = parsed.getTime();
+
+        if (isNaN(millis)) {
+            console.warn('[PARSE ERROR] Invalid timestamp:', rawTimestamp);
+            return Date.now();
+        }
+
+        return millis;
+    }
+
+
 
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
@@ -391,8 +428,12 @@
         const grid = document.getElementById('realtimeGrid');
         const deviceId = data.deviceId;
         const card = grid.querySelector(`[data-device="${deviceId}"]`);
-        const newTimestamp = new Date(data.timestamp).getTime();
+        const newTimestamp = parseTimestamp(data.timestamp);
 
+
+        console.log(`[HANDLE] Device ${data.deviceId} parsed timestamp: ${newTimestamp} (${new Date(newTimestamp).toLocaleTimeString()})`);
+
+        updateDeviceTimestamp(deviceId, newTimestamp);
         if (card) {
             const oldTimestamp = parseInt(card.getAttribute('data-timestamp')) || 0;
 
@@ -412,6 +453,7 @@
             newCard.setAttribute('data-timestamp', newTimestamp);
             grid.appendChild(newCard);
         }
+
     }
 
 
@@ -435,7 +477,11 @@
     function createDeviceCard(data) {
         const cardDiv = document.createElement('div');
         cardDiv.setAttribute('data-device', data.deviceId);
-        cardDiv.setAttribute('data-timestamp', new Date(data.timestamp).getTime());
+        const safeTimestamp = parseTimestamp(data.timestamp);
+        cardDiv.setAttribute('data-timestamp', safeTimestamp);
+
+        console.log(`[CREATE] Card ${data.deviceId} set timestamp: ${safeTimestamp}`);
+
         cardDiv.className = 'bg-gray-50 rounded-lg p-4 border';
         cardDiv.innerHTML = getCardHTML(data);
         return cardDiv;
@@ -480,7 +526,8 @@
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-600">Updated:</span>
-                        <span>${new Date(data.timestamp).toLocaleTimeString()}</span>
+                        <span>${new Date(parseTimestamp(data.timestamp)).toLocaleTimeString()}</span>
+
 
                     </div>
                 </div>
@@ -650,6 +697,48 @@
 
     // Auto refresh every 30 seconds
     setInterval(loadRealtimeData, 30000);
+
+    // Bản đồ lưu timestamp cập nhật cuối cùng của mỗi thiết bị
+    const deviceTimestamps = {};
+
+    // Hàm cập nhật timestamp mỗi khi có dữ liệu mới
+    function updateDeviceTimestamp(deviceId, timestamp) {
+        deviceTimestamps[deviceId] = timestamp;
+        console.log(`[TIMESTAMP] Updated deviceTimestamps[${deviceId}] = ${timestamp}`);
+    }
+
+    // Chạy mỗi phút để kiểm tra trạng thái thiết bị
+    setInterval(() => {
+        const now = Date.now();
+        console.log(`[CHECK] Running inactive device check at ${new Date().toLocaleTimeString()}`);
+
+        document.querySelectorAll('[data-device]').forEach(card => {
+            const deviceId = card.getAttribute('data-device');
+            const rawTimestamp = card.getAttribute('data-timestamp');
+            const lastUpdated = deviceTimestamps[deviceId] || parseTimestamp(rawTimestamp) || 0;
+
+            const secondsSinceUpdate = Math.round((now - lastUpdated) / 1000);
+
+            console.log(`[CHECK] Device ${deviceId} last updated ${secondsSinceUpdate}s ago`);
+
+            const inactiveDiv = card.querySelector('.inactive-warning');
+
+            if ((now - lastUpdated) > 3 * 60 * 1000) {
+                if (!inactiveDiv) {
+                    console.log(`[WARNING] Device ${deviceId} inactive (> 60s). Showing warning.`);
+                    const warning = document.createElement('div');
+                    warning.className = 'inactive-warning mt-3 p-2 bg-yellow-100 border border-yellow-200 rounded text-yellow-800 text-xs font-medium';
+                    warning.innerHTML = `⚠️ DEVICE INACTIVE: No updates in last 3 minute`;
+                    card.appendChild(warning);
+                }
+            } else {
+                if (inactiveDiv) {
+                    console.log(`[OK] Device ${deviceId} is active again. Removing warning.`);
+                    inactiveDiv.remove();
+                }
+            }
+        });
+    }, 60 * 1000);
 </script>
 </body>
 </html>
