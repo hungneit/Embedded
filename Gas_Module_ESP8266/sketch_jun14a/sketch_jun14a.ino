@@ -1,4 +1,4 @@
-// ========== HIGHLY OPTIMIZED ESP8266 WITH ROBUST BINARY PROTOCOL ==========
+
 
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
@@ -7,37 +7,34 @@
 #include <SoftwareSerial.h>
 #include <WiFiClientSecure.h>
 
-// ==== Cấu hình WiFi và Server ====
 const char* ssid = "LV_2.0";           
 const char* password = "12341234";   
 const char* serverURL = "https://iot.theman.vn/api/gas-sensor"; 
 const char* deviceID = "GAS_SENSOR_01";
 
-// ==== ROBUST Binary Protocol với timeout handling ====
 #define PACKET_START_MARKER 0x55
 #define PACKET_HEADER       0xAA  
 #define PACKET_END_MARKER   0x33
 #define PACKET_SIZE         10
 #define STM32_TIMEOUT       120000
-#define PACKET_TIMEOUT      100    // Timeout cho incomplete packets (ms)
-#define SYNC_BUFFER_SIZE    20     // Buffer để tìm sync pattern
+#define PACKET_TIMEOUT      100   
+#define SYNC_BUFFER_SIZE    20  
 
-// Improved packet structure
 typedef struct {
-    uint8_t start_marker;   // 0x55
-    uint8_t header;         // 0xAA
-    uint16_t gas_value;     // ADC value 0-4095
-    uint8_t flags;          // bit0-1: gas_level, bit2: system_state, bit3: relay_state
-    uint8_t sequence;       // Message counter
-    uint8_t reserved;       // For future use
-    uint16_t checksum;      // CRC16
-    uint8_t end_marker;     // 0x33
+    uint8_t start_marker; 
+    uint8_t header;        
+    uint16_t gas_value;     
+    uint8_t flags;         
+    uint8_t sequence;      
+    uint8_t reserved;      
+    uint16_t checksum;     
+    uint8_t end_marker;     
 } __attribute__((packed)) sensor_packet_t;
 
-// ==== Hardware ====
-SoftwareSerial stm32Serial(D2, -1); // RX=D2, TX=không dùng
 
-// ==== Advanced Binary Parser State Machine ====
+SoftwareSerial stm32Serial(D2, -1); 
+
+
 typedef enum {
     PARSER_IDLE,
     PARSER_SYNC_FOUND,
@@ -57,7 +54,7 @@ typedef struct {
 
 binary_parser_t parser = {PARSER_IDLE, {0}, 0, {0}, 0, 0, 0};
 
-// ==== Sensor Data với Power Save Mode ====
+
 struct {
     int gasValue;
     String gasStatus;
@@ -67,11 +64,11 @@ struct {
     bool hasData;
     bool forceNextSend;
     uint8_t lastSequence;
-    bool systemActive;       // NEW: Track STM32 system state
-    bool powerSaveMode;      // NEW: Track if STM32 in power save
+    bool systemActive;     
+    bool powerSaveMode;      
 } sensor = {0, "UNKNOWN", "UNKNOWN", "UNKNOWN", 0, false, false, 255, false, false};
 
-// ==== Enhanced stats với error tracking ====
+
 struct {
     unsigned long bootTime;
     unsigned long lastSTM32Contact;
@@ -90,13 +87,13 @@ struct {
     int invalidHeaders;
     int crcErrors;
     int duplicatePackets;
-    int incompletePackets;    // NEW
-    int syncLostCount;        // NEW
-    int timeoutCount;         // NEW
-    int markerMismatchCount;  // NEW
+    int incompletePackets; 
+    int syncLostCount;      
+    int timeoutCount;      
+    int markerMismatchCount;
 } stats = {0, 0, 0, 0, false, false, false, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-// ==== Function prototypes ====
+
 uint16_t calculate_crc16(uint8_t* data, uint8_t len);
 bool parse_binary_packet_robust(uint8_t* buffer);
 String getGasStatusString(uint8_t level);
@@ -134,7 +131,7 @@ void loop() {
     sendToServer_Optimized();
     printStatus_Enhanced();
     
-    delay(10); // Optimized delay
+    delay(10); 
 }
 
 void connectWiFi() {
@@ -158,7 +155,6 @@ void connectWiFi() {
     }
 }
 
-// ==== CRC16 Calculation ====
 uint16_t calculate_crc16(uint8_t* data, uint8_t len) {
     uint16_t crc = 0xFFFF;
     for (uint8_t i = 0; i < len; i++) {
@@ -174,7 +170,6 @@ uint16_t calculate_crc16(uint8_t* data, uint8_t len) {
     return crc;
 }
 
-// ==== Gas Status String ====
 String getGasStatusString(uint8_t level) {
     switch(level) {
         case 0: return "SAFE";
@@ -196,20 +191,16 @@ void reset_binary_parser(void) {
     memset(parser.sync_buffer, 0, SYNC_BUFFER_SIZE);
 }
 
-// ==== Sync Pattern Detection ====
 bool find_sync_pattern(uint8_t byte) {
-    // Shift sync buffer and add new byte
     for (int i = 0; i < SYNC_BUFFER_SIZE - 1; i++) {
         parser.sync_buffer[i] = parser.sync_buffer[i + 1];
     }
     parser.sync_buffer[SYNC_BUFFER_SIZE - 1] = byte;
     
-    // Look for start marker + header pattern
     for (int i = 0; i < SYNC_BUFFER_SIZE - 1; i++) {
         if (parser.sync_buffer[i] == PACKET_START_MARKER && 
             parser.sync_buffer[i + 1] == PACKET_HEADER) {
             
-            // Found sync pattern, start building packet
             parser.buffer[0] = PACKET_START_MARKER;
             parser.buffer[1] = PACKET_HEADER;
             parser.index = 2;
@@ -231,16 +222,13 @@ void handle_incomplete_packet(void) {
     stats.incompletePackets++;
     stats.timeoutCount++;
     
-    // Try to recover by looking for sync in current buffer
     bool found_sync = false;
     for (int i = 1; i < parser.index - 1; i++) {
         if (parser.buffer[i] == PACKET_START_MARKER && 
             parser.buffer[i + 1] == PACKET_HEADER) {
             
-            // Found potential new packet start
             Serial.println("🔄 Recovery: Found sync at position " + String(i));
             
-            // Move data to beginning
             for (int j = 0; j < parser.index - i; j++) {
                 parser.buffer[j] = parser.buffer[i + j];
             }
@@ -257,11 +245,9 @@ void handle_incomplete_packet(void) {
     }
 }
 
-// ==== ROBUST Binary Packet Parser ====
 bool parse_binary_packet_robust(uint8_t* buffer) {
     sensor_packet_t* packet = (sensor_packet_t*)buffer;
     
-    // Comprehensive validation
     if (packet->start_marker != PACKET_START_MARKER) {
         Serial.println("❌ Invalid start marker: 0x" + String(packet->start_marker, HEX));
         stats.markerMismatchCount++;
@@ -281,7 +267,6 @@ bool parse_binary_packet_robust(uint8_t* buffer) {
         return false;
     }
     
-    // CRC verification
     uint8_t* crc_data = buffer + 1;
     uint16_t calculated_crc = calculate_crc16(crc_data, PACKET_SIZE - 4);
     
@@ -292,14 +277,12 @@ bool parse_binary_packet_robust(uint8_t* buffer) {
         return false;
     }
     
-    // Duplicate check
     if (packet->sequence == sensor.lastSequence) {
         Serial.println("⚠️ Duplicate packet #" + String(packet->sequence) + " ignored");
         stats.duplicatePackets++;
         return false;
     }
     
-    // Data extraction and validation
     uint16_t newGas = packet->gas_value;
     uint8_t gasLevel = packet->flags & 0x03;
     uint8_t systemState = (packet->flags >> 2) & 0x01;
@@ -311,13 +294,11 @@ bool parse_binary_packet_robust(uint8_t* buffer) {
         return false;
     }
     
-    // ==== POWER SAVE MODE DETECTION - Improved ====
     bool wasActive = sensor.systemActive;
     bool wasPowerSave = sensor.powerSaveMode;
     
     sensor.systemActive = systemState;
     
-    // Chỉ update power save mode khi có thay đổi thực sự
     if (wasActive != systemState) {
         if (wasActive && !systemState) {
             Serial.println("🔋 STM32 entered POWER SAVE mode");
@@ -330,16 +311,14 @@ bool parse_binary_packet_robust(uint8_t* buffer) {
         }
     }
     
-    // Đảm bảo power save mode đúng với system state
     sensor.powerSaveMode = !systemState;
     
-    // Change detection for immediate send
     bool gasChanged = abs((int)newGas - sensor.gasValue) >= 30;
     bool statusChanged = (getGasStatusString(gasLevel) != sensor.gasStatus);
     bool systemChanged = (sensor.systemStatus != String(systemState ? "ACTIVE" : "STOPPED"));
     bool relayChanged = (sensor.relayStatus != String(relayState ? "ON" : "OFF"));
     
-    if (systemState) { // Only check gas changes when system is active
+    if (systemState) { 
         bool hasGasDanger = (gasLevel >= 1);
         bool wasNoGas = (sensor.gasStatus == "SAFE" || sensor.gasStatus == "UNKNOWN");
         bool newGasDanger = hasGasDanger && wasNoGas;
@@ -350,7 +329,6 @@ bool parse_binary_packet_robust(uint8_t* buffer) {
         }
     }
     
-    // Update sensor data
     sensor.gasValue = newGas;
     sensor.gasStatus = getGasStatusString(gasLevel);
     sensor.systemStatus = systemState ? "ACTIVE" : "STOPPED";
@@ -370,7 +348,6 @@ bool parse_binary_packet_robust(uint8_t* buffer) {
     return true;
 }
 
-// ==== ROBUST STM32 Data Reader với State Machine ====
 void readSTM32_Robust() {
     unsigned long now = millis();
     
@@ -380,11 +357,8 @@ void readSTM32_Robust() {
         
         switch (parser.state) {
             case PARSER_IDLE:
-                // Look for sync pattern
                 if (find_sync_pattern(incomingByte)) {
-                    // Sync found, state already changed to BUILDING
                 } else {
-                    // Check if it's a text message
                     char c = (char)incomingByte;
                     static String textBuffer = "";
                     
@@ -410,14 +384,12 @@ void readSTM32_Robust() {
                 parser.buffer[parser.index++] = incomingByte;
                 
                 if (parser.index >= PACKET_SIZE) {
-                    // Complete packet received
                     parser.state = PARSER_PACKET_COMPLETE;
                     stats.totalBinaryPackets++;
                     stats.lastSTM32Contact = now;
                     stats.stm32Connected = true;
                     
                     if (parse_binary_packet_robust(parser.buffer)) {
-                        // Successfully parsed
                     } else {
                         stats.binaryErrors++;
                     }
@@ -432,14 +404,12 @@ void readSTM32_Robust() {
         }
     }
     
-    // Timeout handling for incomplete packets
     if (parser.state == PARSER_BUILDING_PACKET && 
         (now - parser.packet_start_time) > PACKET_TIMEOUT) {
         handle_incomplete_packet();
     }
 }
 
-// ==== Text Message Processor ====
 void processTextMessage(String msg) {
     if (msg.length() == 0) return;
     
@@ -453,7 +423,6 @@ void processTextMessage(String msg) {
         stats.heartbeatCount++;
         parseHeartbeat(msg);
         
-        // POWER SAVE detection từ heartbeat - chỉ khi có POWER_SAVE keyword
         if (msg.indexOf("POWER_SAVE") != -1 && !sensor.powerSaveMode) {
             sensor.powerSaveMode = true;
             Serial.println("🔋 Power save mode detected from heartbeat");
@@ -498,7 +467,6 @@ void parseHeartbeat(String msg) {
         }
     }
     
-    // Chỉ force send khi có thay đổi thực sự
     if (wasActive != stats.stm32SystemActive) {
         sensor.forceNextSend = true;
     }
@@ -521,7 +489,6 @@ void checkSTM32Health() {
     }
 }
 
-// ==== OPTIMIZED Server Sending với Power Save ====
 void sendToServer_Optimized() {
     if (!stats.wifiConnected || WiFi.status() != WL_CONNECTED) {
         return;
@@ -529,30 +496,26 @@ void sendToServer_Optimized() {
 
     unsigned long now = millis();
     bool shouldSend = false;
-    static bool powerSaveMessageShown = false;  // NEW: Prevent spam
+    static bool powerSaveMessageShown = false;
 
-    // Force send conditions
     if (sensor.forceNextSend) {
         shouldSend = true;
         Serial.println("🚨 FORCE SEND - State change or critical event!");
-        powerSaveMessageShown = false;  // Reset flag on force send
+        powerSaveMessageShown = false;  
     } else {
         unsigned long interval;
 
         if (!stats.stm32Connected) {
-            interval = 60000; // STM32 offline
-            powerSaveMessageShown = false;  // Reset when offline
+            interval = 60000;
+            powerSaveMessageShown = false;
         } else if (sensor.powerSaveMode || !stats.stm32SystemActive) {
-            // ==== POWER SAVE MODE: Gửi ít hơn ====
-            interval = 180000; // 3 phút khi power save
+            interval = 180000;
             
-            // Chỉ hiển thị thông báo power save 1 lần
             if (!powerSaveMessageShown) {
                 Serial.println("🔋 Entering power save mode - reduced sending frequency (3min intervals)");
                 powerSaveMessageShown = true;
             }
         } else {
-            // Active mode - gửi theo gas level
             if (sensor.gasStatus == "CRITICAL") {
                 interval = 2000;
             } else if (sensor.gasStatus == "DANGER") {
@@ -563,7 +526,6 @@ void sendToServer_Optimized() {
                 interval = 10000;
             }
             
-            // Reset power save message when returning to active
             if (powerSaveMessageShown) {
                 Serial.println("⚡ Exiting power save mode - resuming normal frequency");
                 powerSaveMessageShown = false;
@@ -573,7 +535,6 @@ void sendToServer_Optimized() {
         if (now - stats.lastServerSend >= interval) {
             shouldSend = true;
             
-            // Chỉ hiển thị loại interval send khi KHÔNG phải power save
             if (!sensor.powerSaveMode && stats.stm32SystemActive) {
                 Serial.println("⏰ Interval send (" + String(interval / 1000) + "s) - " + sensor.gasStatus);
             } else if (sensor.powerSaveMode || !stats.stm32SystemActive) {
@@ -597,7 +558,6 @@ void sendToServer_Optimized() {
 
     if (stats.stm32Connected) {
         if (sensor.powerSaveMode || !stats.stm32SystemActive) {
-            // Power save mode
             doc["gas_value"] = -1;
             doc["gas_status"] = "POWER_SAVE";
             doc["system_status"] = "POWER_SAVE";
@@ -605,7 +565,6 @@ void sendToServer_Optimized() {
             doc["message"] = "Gas sensor in power save mode";
             doc["mode"] = "ENERGY_EFFICIENT";
         } else if (stats.stm32SystemActive && sensor.hasData) {
-            // Active mode with gas data
             doc["gas_value"] = sensor.gasValue;
             doc["gas_status"] = sensor.gasStatus;
             doc["system_status"] = "ACTIVE";
@@ -617,7 +576,6 @@ void sendToServer_Optimized() {
                 doc["alert_level"] = sensor.gasStatus;
             }
         } else {
-            // Initializing
             doc["gas_value"] = -1;
             doc["gas_status"] = "INITIALIZING";
             doc["system_status"] = "INITIALIZING";
@@ -625,7 +583,6 @@ void sendToServer_Optimized() {
             doc["mode"] = "STARTUP";
         }
     } else {
-        // STM32 offline
         doc["gas_value"] = -1;
         doc["gas_status"] = "OFFLINE";
         doc["system_status"] = "OFFLINE";
@@ -636,7 +593,6 @@ void sendToServer_Optimized() {
         doc["mode"] = "ERROR";
     }
 
-    // Enhanced statistics
     doc["wifi_rssi"] = WiFi.RSSI();
     doc["total_binary_packets"] = stats.totalBinaryPackets;
     doc["valid_packets"] = stats.validPackets;
@@ -687,7 +643,6 @@ void sendToServer_Optimized() {
     sensor.forceNextSend = false;
 }
 
-// ==== Enhanced Status Reporting ====
 void printStatus_Enhanced() {
     static unsigned long lastReport = 0;
     
