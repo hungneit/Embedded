@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+// ==== LCD I2C Address ====
+#define LCD_I2C_ADDR 0x4E  // 0x27 << 1
+
 // ==== Cấu hình ngưỡng gas ====
 #define GAS_SAFE_THRESHOLD     400
 #define GAS_WARNING_THRESHOLD  1000
@@ -15,13 +18,14 @@
 #define RELAY_MIN_ON_TIME      5000  // 5s
 #define RELAY_MIN_OFF_TIME     3000  // 3s
 
-// ==== Binary Protocol ====
+// ==== IMPROVED Binary Protocol với sync ====
 #define PACKET_START_MARKER 0x55
 #define PACKET_HEADER       0xAA
 #define PACKET_END_MARKER   0x33
 #define PACKET_SIZE         10
+#define PACKET_SYNC_DELAY   50  // Delay giữa các byte để ESP sync
 
-// Packet structure (10 bytes với markers)
+// Packet structure với improved sync
 typedef struct {
     uint8_t start_marker;   // 0x55
     uint8_t header;         // 0xAA - sync byte
@@ -44,13 +48,27 @@ void delay_ms(uint32_t ms);
 uint16_t Read_MQ2_Fast(void);
 uint8_t Read_Button_Fast(uint8_t pin);
 void uart_send_text(char* str);
-void uart_send_bytes_safe(uint8_t* data, uint8_t len);
+void uart_send_bytes_sync(uint8_t* data, uint8_t len);  // Improved sync version
 void Set_RGB_LED(uint8_t red, uint8_t green, uint8_t blue);
 uint8_t Get_Gas_Level(uint16_t gas_value);
 uint16_t calculate_crc16(uint8_t* data, uint8_t len);
-void send_binary_packet_safe(uint16_t gas, uint8_t gas_level, uint8_t system_state, uint8_t relay_state);
+void send_binary_packet_sync(uint16_t gas, uint8_t gas_level, uint8_t system_state, uint8_t relay_state);
 void send_text_message(char* msg);
+void send_heartbeat_only(void);  // NEW: Heartbeat chỉ gửi trạng thái
 void Update_Relay_Smart(uint16_t gas_value);
+
+// ==== LCD Function prototypes ====
+void I2C1_Init(void);
+void I2C1_SendBytes(uint8_t addr, uint8_t *data, uint8_t len);
+void LCD_SendCommand(uint8_t cmd);
+void LCD_SendData(uint8_t data);
+void LCD_SendString(char *str);
+void LCD_Init(void);
+void LCD_SetCursor(uint8_t row, uint8_t col);
+void LCD_Clear(void);
+void LCD_Update_Display(uint16_t gas_value, uint8_t system_state, uint8_t relay_state);
+void LCD_Show_Stopped_Screen(void);  // NEW: Màn hình tắt
+uint8_t LCD_Should_Update(uint16_t current_gas, uint8_t current_system_state, uint8_t current_relay_state);  // NEW: Smart update logic
 
 // ==== Biến toàn cục ====
 volatile uint8_t system_state = 0; // 0: STOPPED, 1: ACTIVE
@@ -62,10 +80,238 @@ volatile uint32_t fast_blink_counter = 0;
 uint8_t relay_state = 0;
 uint32_t relay_last_change_time = 0;
 
-// Data tracking
+// Data tracking - OPTIMIZED
 uint16_t last_sent_gas = 0;
 uint8_t last_sent_state = 255;
 uint8_t packet_sequence = 0;
+
+// LCD update tracking - OPTIMIZED
+uint32_t lcd_update_counter = 0;
+uint8_t lcd_needs_update = 0;
+uint8_t lcd_stopped_screen_shown = 0;  // NEW: Tracking stopped screen
+uint16_t last_lcd_gas_value = 0;       // NEW: Track last gas value shown on LCD
+uint32_t last_lcd_update_time = 0;     // NEW: Track last LCD update time
+
+// ==== OPTIMIZED: Chỉ đọc gas khi cần ====
+typedef struct {
+    uint16_t current_gas;
+    uint8_t current_level;
+    uint32_t last_read_time;
+    uint8_t valid_data;
+} gas_data_t;
+
+gas_data_t gas_sensor = {0, 0, 0, 0};
+
+// ==== Delay function ====
+void delay_ms(uint32_t ms) {
+    for(uint32_t i = 0; i < ms; i++) {
+        for(uint32_t j = 0; j < 8000; j++) {
+            __NOP();
+        }
+    }
+}
+
+// ==== I2C1 Init for PB6(SCL), PB7(SDA) ====
+void I2C1_Init(void) {
+    RCC->APB1ENR |= (1 << 21);  // I2C1 enable
+    RCC->APB2ENR |= (1 << 3);   // GPIOB enable
+
+    GPIOB->CRL &= ~(0xF << 24);
+    GPIOB->CRL |= (0xF << 24);   // 1111: AF open-drain 50MHz
+
+    GPIOB->CRL &= ~(0xF << 28);
+    GPIOB->CRL |= (0xF << 28);   // 1111: AF open-drain 50MHz
+
+    I2C1->CR1 = 0;               // Reset I2C1
+    I2C1->CR2 = 36;              // APB1 = 36MHz
+    I2C1->CCR = 180;             // 100kHz: 36MHz/(2*100kHz) = 180
+    I2C1->TRISE = 37;            // Rise time
+    I2C1->CR1 |= (1 << 0);       // Enable I2C1
+}
+
+// ==== I2C Send Bytes ====
+void I2C1_SendBytes(uint8_t addr, uint8_t *data, uint8_t len) {
+    while(I2C1->SR2 & (1 << 1));
+
+    I2C1->CR1 |= (1 << 8);
+    while(!(I2C1->SR1 & (1 << 0)));
+
+    I2C1->DR = addr;
+    while(!(I2C1->SR1 & (1 << 1)));
+    (void)I2C1->SR2;
+
+    for(uint8_t i = 0; i < len; i++) {
+        while(!(I2C1->SR1 & (1 << 7)));
+        I2C1->DR = data[i];
+    }
+
+    while(!(I2C1->SR1 & (1 << 2)));
+    I2C1->CR1 |= (1 << 9);
+}
+
+// ==== LCD Functions ====
+void LCD_SendCommand(uint8_t cmd) {
+    uint8_t data[4];
+    data[0] = (cmd & 0xF0) | 0x0C;
+    data[1] = (cmd & 0xF0) | 0x08;
+    data[2] = ((cmd << 4) & 0xF0) | 0x0C;
+    data[3] = ((cmd << 4) & 0xF0) | 0x08;
+    I2C1_SendBytes(LCD_I2C_ADDR, data, 4);
+    delay_ms(2);
+}
+
+void LCD_SendData(uint8_t data) {
+    uint8_t buf[4];
+    buf[0] = (data & 0xF0) | 0x0D;
+    buf[1] = (data & 0xF0) | 0x09;
+    buf[2] = ((data << 4) & 0xF0) | 0x0D;
+    buf[3] = ((data << 4) & 0xF0) | 0x09;
+    I2C1_SendBytes(LCD_I2C_ADDR, buf, 4);
+    delay_ms(2);
+}
+
+void LCD_SendString(char *str) {
+    while(*str) {
+        LCD_SendData(*str++);
+    }
+}
+
+void LCD_Init(void) {
+    delay_ms(50);
+    LCD_SendCommand(0x30);
+    delay_ms(5);
+    LCD_SendCommand(0x30);
+    delay_ms(1);
+    LCD_SendCommand(0x30);
+    delay_ms(1);
+    LCD_SendCommand(0x02);
+    delay_ms(1);
+    LCD_SendCommand(0x28);
+    delay_ms(1);
+    LCD_SendCommand(0x08);
+    delay_ms(1);
+    LCD_SendCommand(0x01);
+    delay_ms(2);
+    LCD_SendCommand(0x06);
+    delay_ms(1);
+    LCD_SendCommand(0x0C);
+    delay_ms(1);
+}
+
+void LCD_SetCursor(uint8_t row, uint8_t col) {
+    uint8_t pos = (row == 0) ? (0x80 + col) : (0xC0 + col);
+    LCD_SendCommand(pos);
+    delay_ms(2);
+}
+
+void LCD_Clear(void) {
+    LCD_SendCommand(0x01);
+    delay_ms(2);
+}
+
+// ==== SMART LCD Update Function ====
+uint8_t LCD_Should_Update(uint16_t current_gas, uint8_t current_system_state, uint8_t current_relay_state) {
+    // Không cập nhật nếu system tắt
+    if (current_system_state == 0) {
+        return 0;
+    }
+
+    uint8_t should_update = 0;
+    uint32_t time_since_last_update = loop_counter - last_lcd_update_time;
+
+    // 1. Gas level thay đổi (ưu tiên cao nhất)
+    uint8_t current_level = Get_Gas_Level(current_gas);
+    uint8_t last_level = Get_Gas_Level(last_lcd_gas_value);
+    if (current_level != last_level) {
+        should_update = 1;
+        send_text_message("LCD_UPDATE_GAS_LEVEL_CHANGED");
+    }
+
+    // 2. Gas value thay đổi đáng kể (>= 10 đơn vị)
+    else if (abs((int)current_gas - (int)last_lcd_gas_value) >= 20) {
+        should_update = 1;
+        char msg[60];
+        sprintf(msg, "LCD_UPDATE_GAS_CHANGED_%d_TO_%d", last_lcd_gas_value, current_gas);
+        send_text_message(msg);
+    }
+
+    // 3. Relay state thay đổi
+    else if (relay_state != (current_relay_state)) {
+        should_update = 1;
+        send_text_message("LCD_UPDATE_RELAY_STATE_CHANGED");
+    }
+
+    // 4. Cập nhật định kỳ dựa trên gas level (tần suất khác nhau)
+    else if (!should_update) {
+        uint32_t update_interval;
+
+        switch(current_level) {
+            case 0: update_interval = 10000; break;  // SAFE: 10s
+            case 1: update_interval = 5000;  break;  // WARNING: 5s
+            case 2: update_interval = 3000;  break;  // DANGER: 3s
+            case 3: update_interval = 2000;  break;  // CRITICAL: 2s
+            default: update_interval = 10000; break;
+        }
+
+        if (time_since_last_update >= update_interval) {
+            should_update = 1;
+            char msg[50];
+            sprintf(msg, "LCD_UPDATE_PERIODIC_%s",
+                    (current_level == 0) ? "SAFE" :
+                    (current_level == 1) ? "WARN" :
+                    (current_level == 2) ? "DANG" : "CRIT");
+            send_text_message(msg);
+        }
+    }
+
+    return should_update;
+}
+void LCD_Show_Stopped_Screen(void) {
+    if (lcd_stopped_screen_shown) return;  // Chỉ hiển thị 1 lần
+
+    LCD_Clear();
+    LCD_SetCursor(0, 0);
+    LCD_SendString("SYSTEM STOPPED");
+    LCD_SetCursor(1, 0);
+    LCD_SendString("Press SW1 START");
+
+    lcd_stopped_screen_shown = 1;
+    send_text_message("LCD_STOPPED_SCREEN_DISPLAYED");
+}
+
+// ==== OPTIMIZED: LCD Update chỉ khi cần ====
+void LCD_Update_Display(uint16_t gas_value, uint8_t system_state, uint8_t relay_state) {
+    char line1[17], line2[17];
+    uint8_t gas_level = Get_Gas_Level(gas_value);
+
+    const char* level_names[] = {"SAFE", "WARN", "DANG", "CRIT"};
+    sprintf(line1, "GAS:%4d %s", gas_value, level_names[gas_level]);
+
+    const char* sys_status = system_state ? "ON " : "OFF";
+    const char* relay_status = relay_state ? "R:ON " : "R:OFF";
+    sprintf(line2, "SYS:%s %s", sys_status, relay_status);
+
+    LCD_SetCursor(0, 0);
+    LCD_SendString("                ");
+    LCD_SetCursor(0, 0);
+    LCD_SendString(line1);
+
+    LCD_SetCursor(1, 0);
+    LCD_SendString("                ");
+    LCD_SetCursor(1, 0);
+    LCD_SendString(line2);
+
+    // Update tracking variables
+    lcd_stopped_screen_shown = 0;  // Reset stopped screen flag
+    last_lcd_gas_value = gas_value;
+    last_lcd_update_time = loop_counter;
+
+    // Debug message với gas change info
+    char debug_msg[80];
+    sprintf(debug_msg, "LCD_UPDATED_GAS_%d_LEVEL_%s_RELAY_%s",
+            gas_value, level_names[gas_level], relay_state ? "ON" : "OFF");
+    send_text_message(debug_msg);
+}
 
 // ==== System Clock 72MHz ====
 void SystemInit72MHz(void) {
@@ -89,7 +335,7 @@ void SystemInit72MHz(void) {
 // ==== Timer delay ====
 void timer_init(void) {
     RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
-    TIM2->PSC = 72 - 1;    // 1MHz timer
+    TIM2->PSC = 72 - 1;
     TIM2->ARR = 0xFFFF;
     TIM2->CR1 |= TIM_CR1_CEN;
 }
@@ -99,59 +345,61 @@ void delay_us(uint32_t us) {
     while (TIM2->CNT < us);
 }
 
-void delay_ms(uint32_t ms) {
-    for (uint32_t i = 0; i < ms; i++) {
-        delay_us(1000);
-    }
-}
-
-// ==== UART Config - 9600 baud ====
+// ==== UART Config ====
 void uart_init(void) {
-    // Bật clock cho GPIOA, USART1, và AFIO
     RCC->APB2ENR |= RCC_APB2ENR_IOPAEN | RCC_APB2ENR_USART1EN | RCC_APB2ENR_AFIOEN;
 
-    // Cấu hình PA9 (TX) - Alternate function push-pull
     GPIOA->CRH &= ~(GPIO_CRH_CNF9 | GPIO_CRH_MODE9);
-    GPIOA->CRH |= (0x0B << 4);  // 1011 = Alt func push-pull, 50MHz
+    GPIOA->CRH |= (0x0B << 4);
 
-    // Cấu hình UART: 9600 baud
     USART1->BRR = 72000000 / 9600;
-    USART1->CR1 = USART_CR1_TE | USART_CR1_UE;  // TX enable + UART enable
+    USART1->CR1 = USART_CR1_TE | USART_CR1_UE;
 }
 
-// ==== UART Send Functions ====
+// ==== Text Message Sending ====
 void uart_send_text(char* str) {
     while (*str) {
         while (!(USART1->SR & USART_SR_TXE));
         USART1->DR = *str++;
     }
-    // Wait for transmission complete
     while (!(USART1->SR & USART_SR_TC));
 }
 
-void uart_send_bytes_safe(uint8_t* data, uint8_t len) {
-    // Wait for UART to be completely ready
-    while (!(USART1->SR & USART_SR_TC));
-    delay_us(50); // Small pre-delay
+// ==== IMPROVED: Synchronized UART Transmission ====
+void uart_send_bytes_sync(uint8_t* data, uint8_t len) {
+    // Longer pre-transmission delay for ESP sync
+    delay_us(500);
 
-    for (uint8_t i = 0; i < len; i++) {
+    // Send start marker with extra delay
+    while (!(USART1->SR & USART_SR_TXE));
+    USART1->DR = data[0];  // Start marker
+    while (!(USART1->SR & USART_SR_TC));
+    delay_us(PACKET_SYNC_DELAY * 2);  // Extra delay after start marker
+
+    // Send remaining bytes with consistent timing
+    for (uint8_t i = 1; i < len; i++) {
         while (!(USART1->SR & USART_SR_TXE));
         USART1->DR = data[i];
-
-        // Small delay between bytes for stability at 9600 baud
-        delay_us(10);
+        while (!(USART1->SR & USART_SR_TC));
+        delay_us(PACKET_SYNC_DELAY);  // Consistent delay between bytes
     }
 
-    // Wait for final transmission complete
-    while (!(USART1->SR & USART_SR_TC));
-    delay_us(100); // Post-transmission delay
+    // Post-transmission delay
+    delay_us(500);
 }
 
-// ==== Text Message Sending ====
 void send_text_message(char* msg) {
     uart_send_text("TXT:");
     uart_send_text(msg);
     uart_send_text("\r\n");
+}
+
+// ==== NEW: Heartbeat chỉ gửi trạng thái ====
+void send_heartbeat_only(void) {
+    char hb_msg[80];
+    sprintf(hb_msg, "HEARTBEAT_STATUS_%s_UPTIME_%lu_MODE_POWER_SAVE",
+            system_state ? "ACTIVE" : "STOPPED", loop_counter/1000);
+    send_text_message(hb_msg);
 }
 
 // ==== CRC16 Calculation ====
@@ -170,11 +418,10 @@ uint16_t calculate_crc16(uint8_t* data, uint8_t len) {
     return crc;
 }
 
-// ==== Binary Packet Sending ====
-void send_binary_packet_safe(uint16_t gas, uint8_t gas_level, uint8_t system_state, uint8_t relay_state) {
+// ==== IMPROVED: Synchronized Binary Packet Sending ====
+void send_binary_packet_sync(uint16_t gas, uint8_t gas_level, uint8_t system_state, uint8_t relay_state) {
     sensor_packet_t packet;
 
-    // Fill packet data
     packet.start_marker = PACKET_START_MARKER;
     packet.header = PACKET_HEADER;
     packet.gas_value = gas;
@@ -183,22 +430,25 @@ void send_binary_packet_safe(uint16_t gas, uint8_t gas_level, uint8_t system_sta
     packet.reserved = 0x00;
     packet.end_marker = PACKET_END_MARKER;
 
-    // Calculate CRC16 (exclude markers and checksum)
-    uint8_t* crc_data = ((uint8_t*)&packet) + 1; // Skip start marker
-    packet.checksum = calculate_crc16(crc_data, sizeof(packet) - 4); // Exclude markers and checksum
+    uint8_t* crc_data = ((uint8_t*)&packet) + 1;
+    packet.checksum = calculate_crc16(crc_data, sizeof(packet) - 4);
 
-    // Send packet with improved timing
-    uart_send_bytes_safe((uint8_t*)&packet, sizeof(packet));
+    // Use improved synchronized transmission
+    uart_send_bytes_sync((uint8_t*)&packet, sizeof(packet));
+
+    // Confirmation message
+    char confirm_msg[50];
+    sprintf(confirm_msg, "BINARY_PACKET_SENT_SEQ_%d_GAS_%d", packet_sequence-1, gas);
+    send_text_message(confirm_msg);
 }
 
-// ==== Cấu hình GPIO ====
+// ==== GPIO Config ====
 void GPIO_Config(void) {
-    // Bật clock GPIOA
     RCC->APB2ENR |= RCC_APB2ENR_IOPAEN;
 
     // PA0 - Input analog cho MQ2
     GPIOA->CRL &= ~(0xF << (0 * 4));
-    GPIOA->CRL |= (0x0 << (0 * 4));  // Analog input
+    GPIOA->CRL |= (0x0 << (0 * 4));
 
     // PA1=RED, PA2=GREEN, PA3=BLUE, PA4=BUZZER, PA5=RELAY - Output push-pull
     GPIOA->CRL &= ~((0xF << (1 * 4)) | (0xF << (2 * 4)) | (0xF << (3 * 4)) |
@@ -209,168 +459,196 @@ void GPIO_Config(void) {
     // PA6, PA7 - Input pull-up (SW1, SW2)
     GPIOA->CRL &= ~((0xF << (6 * 4)) | (0xF << (7 * 4)));
     GPIOA->CRL |=  ((0x8 << (6 * 4)) | (0x8 << (7 * 4)));
-    GPIOA->ODR |= (1 << 6) | (1 << 7); // Enable pull-up
+    GPIOA->ODR |= (1 << 6) | (1 << 7);
 
-    // Tắt tất cả output ban đầu
     GPIOA->ODR &= ~((1 << 1) | (1 << 2) | (1 << 3) | (1 << 4) | (1 << 5));
 }
 
-// ==== Cấu hình ADC1 channel 0 (PA0) ====
+// ==== ADC Config ====
 void ADC_Config(void) {
-    RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;    // Bật clock ADC1
-    RCC->CFGR &= ~RCC_CFGR_ADCPRE;         // Clear ADC prescaler
-    RCC->CFGR |= RCC_CFGR_ADCPRE_DIV6;     // PCLK2 / 6 = 12MHz
+    RCC->APB2ENR |= RCC_APB2ENR_ADC1EN;
+    RCC->CFGR &= ~RCC_CFGR_ADCPRE;
+    RCC->CFGR |= RCC_CFGR_ADCPRE_DIV6;
 
-    // Cấu hình ADC
     ADC1->CR2 = 0;
     ADC1->CR1 = 0;
-    ADC1->SQR1 = 0;        // 1 conversion
+    ADC1->SQR1 = 0;
     ADC1->SQR2 = 0;
-    ADC1->SQR3 = 0;        // Channel 0
-    ADC1->SMPR2 = 0x7;     // 239.5 cycles sampling time for channel 0
+    ADC1->SQR3 = 0;
+    ADC1->SMPR2 = 0x7;
 
-    ADC1->CR2 |= ADC_CR2_ADON;             // Bật ADC
-    delay_ms(2);                           // Đợi ADC ổn định
+    ADC1->CR2 |= ADC_CR2_ADON;
+    delay_ms(2);
 
-    ADC1->CR2 |= ADC_CR2_CAL;              // Bắt đầu hiệu chuẩn
-    while (ADC1->CR2 & ADC_CR2_CAL);       // Đợi hiệu chuẩn xong
+    ADC1->CR2 |= ADC_CR2_CAL;
+    while (ADC1->CR2 & ADC_CR2_CAL);
 }
 
-// ==== Faster Gas Reading with Averaging ====
+// ==== OPTIMIZED: Chỉ đọc gas khi system ACTIVE ====
 uint16_t Read_MQ2_Fast(void) {
     uint32_t sum = 0;
 
-    // Take 3 quick readings and average
     for(int i = 0; i < 3; i++) {
-        ADC1->SQR3 = 0;                        // Channel 0 = PA0
-        ADC1->CR2 |= ADC_CR2_ADON;             // Start conversion
-        while (!(ADC1->SR & ADC_SR_EOC));      // Wait for conversion
+        ADC1->SQR3 = 0;
+        ADC1->CR2 |= ADC_CR2_ADON;
+        while (!(ADC1->SR & ADC_SR_EOC));
         sum += ADC1->DR;
-        delay_us(100); // Small delay between readings
+        delay_us(100);
     }
 
-    return sum / 3; // Return average
+    return sum / 3;
 }
 
-// ==== Faster Button Reading ====
+// ==== OPTIMIZED: Smart Gas Reading ====
+void Update_Gas_Reading(void) {
+    if (system_state == 1) {
+        // Chỉ đọc gas khi system ACTIVE
+        gas_sensor.current_gas = Read_MQ2_Fast();
+        gas_sensor.current_level = Get_Gas_Level(gas_sensor.current_gas);
+        gas_sensor.last_read_time = loop_counter;
+        gas_sensor.valid_data = 1;
+    } else {
+        // Khi STOPPED, giữ giá trị cũ hoặc set = 0
+        gas_sensor.current_gas = 0;
+        gas_sensor.current_level = 0;
+        gas_sensor.valid_data = 0;
+    }
+}
+
 uint8_t Read_Button_Fast(uint8_t pin) {
-    if ((GPIOA->IDR & (1 << pin)) == 0) { // Button pressed
-        delay_ms(10); // Reduced debounce time
-        if ((GPIOA->IDR & (1 << pin)) == 0) { // Confirm press
-            while ((GPIOA->IDR & (1 << pin)) == 0); // Wait for release
-            delay_ms(10); // Reduced release debounce
-            return 1; // Valid button press
+    if ((GPIOA->IDR & (1 << pin)) == 0) {
+        delay_ms(10);
+        if ((GPIOA->IDR & (1 << pin)) == 0) {
+            while ((GPIOA->IDR & (1 << pin)) == 0);
+            delay_ms(10);
+            return 1;
         }
     }
-    return 0; // No button press
+    return 0;
 }
 
-// ==== Phân loại mức độ gas ====
 uint8_t Get_Gas_Level(uint16_t gas_value) {
-    if (gas_value < GAS_SAFE_THRESHOLD) return 0;      // SAFE
-    if (gas_value < GAS_WARNING_THRESHOLD) return 1;   // WARNING
-    if (gas_value < GAS_DANGER_THRESHOLD) return 2;    // DANGER
-    return 3;                                          // CRITICAL
+    if (gas_value < GAS_SAFE_THRESHOLD) return 0;
+    if (gas_value < GAS_WARNING_THRESHOLD) return 1;
+    if (gas_value < GAS_DANGER_THRESHOLD) return 2;
+    return 3;
 }
 
-// ==== Điều khiển LED RGB ====
 void Set_RGB_LED(uint8_t red, uint8_t green, uint8_t blue) {
-    // Reset tất cả màu
     GPIOA->ODR &= ~((1 << 1) | (1 << 2) | (1 << 3));
-
-    // Set màu theo yêu cầu (active high)
-    if (red)   GPIOA->ODR |= (1 << 1);   // PA1 = RED
-    if (green) GPIOA->ODR |= (1 << 2);   // PA2 = GREEN
-    if (blue)  GPIOA->ODR |= (1 << 3);   // PA3 = BLUE
+    if (red)   GPIOA->ODR |= (1 << 1);
+    if (green) GPIOA->ODR |= (1 << 2);
+    if (blue)  GPIOA->ODR |= (1 << 3);
 }
 
-// ==== Relay thông minh ====
 void Update_Relay_Smart(uint16_t gas_value) {
     uint32_t time_since_change = loop_counter - relay_last_change_time;
 
     if (relay_state == 0) {
-        // Relay OFF - chỉ bật khi gas cao và đã đủ thời gian OFF
         if (gas_value > RELAY_ON_THRESHOLD && time_since_change > RELAY_MIN_OFF_TIME) {
             relay_state = 1;
-            GPIOA->ODR |= (1 << 5);  // Bật relay
+            GPIOA->ODR |= (1 << 5);
             relay_last_change_time = loop_counter;
         }
     } else {
-        // Relay ON - chỉ tắt khi gas thấp và đã đủ thời gian ON
         if (gas_value < RELAY_OFF_THRESHOLD && time_since_change > RELAY_MIN_ON_TIME) {
             relay_state = 0;
-            GPIOA->ODR &= ~(1 << 5); // Tắt relay
+            GPIOA->ODR &= ~(1 << 5);
             relay_last_change_time = loop_counter;
         }
     }
 }
 
-// ==== Main chính ====
+// ==== OPTIMIZED Main Loop ====
 int main(void) {
     // Khởi tạo system
     SystemInit72MHz();
     timer_init();
-
-    // Khởi tạo các module
     GPIO_Config();
     ADC_Config();
     uart_init();
 
-    // Khởi động
-    delay_ms(1000);  // Reduced startup delay
+    // Khởi tạo LCD
+    I2C1_Init();
+    delay_ms(100);
+    LCD_Init();
 
-    // Gửi thông báo khởi động
-    send_text_message("STM32_START_BINARY_V1.1_IMPROVED");
+    delay_ms(1000);
 
-    // Test LED - faster blink
+    // Hiển thị khởi động
+    LCD_Clear();
+    LCD_SetCursor(0, 0);
+    LCD_SendString("STM32F103C8T6");
+    LCD_SetCursor(1, 0);
+    LCD_SendString("OPTIMIZED v2.0");
+
+    send_text_message("STM32_START_OPTIMIZED_V2.0");
+
+    // Test LED
     for(int i = 0; i < 3; i++) {
-        Set_RGB_LED(0, 1, 0); // GREEN
+        Set_RGB_LED(0, 1, 0);
         delay_ms(200);
-        Set_RGB_LED(0, 0, 0); // OFF
+        Set_RGB_LED(0, 0, 0);
         delay_ms(200);
     }
 
-    send_text_message("READY_BINARY_PROTOCOL_IMPROVED");
+    send_text_message("READY_OPTIMIZED_POWER_SAVE_MODE");
+
+    // Hiển thị stopped screen ban đầu
+    LCD_Show_Stopped_Screen();
 
     while (1) {
         loop_counter++;
 
-        // ✅ FASTER GAS READING
-        uint16_t gas = Read_MQ2_Fast();
-        uint8_t gas_level = Get_Gas_Level(gas);
+        // ==== OPTIMIZED: Chỉ đọc gas khi cần ====
+        Update_Gas_Reading();
 
-        // ✅ FASTER BUTTON HANDLING
+        // ==== Button Handling với LCD update ngay lập tức ====
         if (Read_Button_Fast(6)) {
             system_state = !system_state;
 
-            // IMMEDIATE send binary packet for button press
-            send_binary_packet_safe(gas, gas_level, system_state, relay_state);
+            if (system_state) {
+                // Bật: Đọc gas ngay và gửi binary packet
+                Update_Gas_Reading();
+                send_binary_packet_sync(gas_sensor.current_gas, gas_sensor.current_level,
+                                       system_state, relay_state);
 
-            char btn_msg[40];
-            sprintf(btn_msg, "BTN_SW1_STATE_%s_IMMEDIATE", system_state ? "ACTIVE" : "STOPPED");
-            send_text_message(btn_msg);
+                // Cập nhật LCD ngay
+                LCD_Update_Display(gas_sensor.current_gas, system_state, relay_state);
+
+                send_text_message("BTN_SW1_SYSTEM_ACTIVATED");
+            } else {
+                // Tắt: Chỉ gửi heartbeat
+                send_heartbeat_only();
+
+                // Hiển thị stopped screen
+                LCD_Show_Stopped_Screen();
+
+                send_text_message("BTN_SW1_SYSTEM_STOPPED");
+            }
         }
 
         if (Read_Button_Fast(7)) {
             system_state = 0;
 
-            // IMMEDIATE send for reset
-            send_binary_packet_safe(gas, gas_level, system_state, relay_state);
-            send_text_message("BTN_SW2_RESET_IMMEDIATE");
+            send_heartbeat_only();
+            LCD_Show_Stopped_Screen();
+
+            send_text_message("BTN_SW2_RESET_TO_STOPPED");
         }
 
         if (system_state) {
-            // ==== HỆ THỐNG HOẠT ĐỘNG ====
-            Update_Relay_Smart(gas);
+            // ==== HỆ THỐNG HOẠT ĐỘNG - ĐẦY ĐỦ CHỨC NĂNG ====
+            Update_Relay_Smart(gas_sensor.current_gas);
 
-            // LED and buzzer control
-            if (gas < GAS_SAFE_THRESHOLD) {
+            // LED và buzzer control
+            if (gas_sensor.current_gas < GAS_SAFE_THRESHOLD) {
                 Set_RGB_LED(0, 0, 1);
                 GPIOA->ODR &= ~(1 << 4);
-            } else if (gas < GAS_WARNING_THRESHOLD) {
+            } else if (gas_sensor.current_gas < GAS_WARNING_THRESHOLD) {
                 Set_RGB_LED(1, 1, 0);
                 GPIOA->ODR &= ~(1 << 4);
-            } else if (gas < GAS_DANGER_THRESHOLD) {
+            } else if (gas_sensor.current_gas < GAS_DANGER_THRESHOLD) {
                 blink_counter++;
                 if (blink_counter >= 1000) {
                     blink_counter = 0;
@@ -398,82 +676,78 @@ int main(void) {
                 GPIOA->ODR |= (1 << 4);
             }
 
-        } else {
-            // ==== HỆ THỐNG DỪNG ====
-            Set_RGB_LED(0, 1, 0);
-            GPIOA->ODR &= ~(1 << 4);
-            GPIOA->ODR &= ~(1 << 5);
-            relay_state = 0;
-            blink_counter = 0;
-            fast_blink_counter = 0;
-        }
-
-        // ✅ IMPROVED SEND LOGIC - MORE AGGRESSIVE
-        uint8_t should_send = 0;
-
-        // 1. IMMEDIATE SEND conditions
-        if (system_state != last_sent_state) {
-            should_send = 1;
-            send_text_message("IMMEDIATE_SEND_SYSTEM_STATE_CHANGED");
-        } else {
-            uint8_t current_level = Get_Gas_Level(gas);
-            uint8_t last_level = Get_Gas_Level(last_sent_gas);
-
-            // IMMEDIATE send for gas changes
-            if (last_level == 0 && current_level > 0) {
-                should_send = 1;
-                send_text_message("IMMEDIATE_SEND_GAS_DETECTED");
+            // ==== OPTIMIZED LCD UPDATE - Smart update based on gas changes ====
+            if (LCD_Should_Update(gas_sensor.current_gas, system_state, relay_state)) {
+                LCD_Update_Display(gas_sensor.current_gas, system_state, relay_state);
             }
-            // Lower threshold for immediate send (30 instead of 50)
-            else if (abs((int)gas - (int)last_sent_gas) > 30) {
-                should_send = 1;
-                send_text_message("IMMEDIATE_SEND_GAS_CHANGED_SIGNIFICANT");
-            }
-            else if (current_level != last_level) {
-                should_send = 1;
-                send_text_message("IMMEDIATE_SEND_GAS_LEVEL_CHANGED");
-            }
-        }
 
-        // 2. FASTER interval sending
-        if (!should_send) {
-            uint32_t send_interval;
-            if (system_state == 0) {
-                send_interval = 20000; // Reduced from 30s to 20s
+            // ==== OPTIMIZED SEND LOGIC ====
+            uint8_t should_send = 0;
+
+            if (system_state != last_sent_state) {
+                should_send = 1;
+                send_text_message("SEND_SYSTEM_STATE_CHANGED");
             } else {
-                switch(gas_level) {
-                    case 0: send_interval = 10000; break; // Reduced from 20s to 10s - SAFE
-                    case 1: send_interval = 5000;  break; // Reduced from 8s to 5s - WARNING
-                    case 2: send_interval = 3000;  break; // Reduced from 5s to 3s - DANGER
-                    case 3: send_interval = 2000;  break; // Reduced from 3s to 2s - CRITICAL
-                    default: send_interval = 10000; break;
+                uint8_t current_level = gas_sensor.current_level;
+                uint8_t last_level = Get_Gas_Level(last_sent_gas);
+
+                if (last_level == 0 && current_level > 0) {
+                    should_send = 1;
+                    send_text_message("SEND_GAS_DETECTED");
+                }
+                else if (abs((int)gas_sensor.current_gas - (int)last_sent_gas) > 30) {
+                    should_send = 1;
+                    send_text_message("SEND_GAS_SIGNIFICANT_CHANGE");
+                }
+                else if (current_level != last_level) {
+                    should_send = 1;
+                    send_text_message("SEND_GAS_LEVEL_CHANGED");
                 }
             }
 
-            static uint32_t last_send_time = 0;
-            if (loop_counter - last_send_time >= send_interval) {
-                should_send = 1;
-                last_send_time = loop_counter;
+            // Interval sending khi ACTIVE
+            if (!should_send) {
+                uint32_t send_interval;
+                switch(gas_sensor.current_level) {
+                    case 0: send_interval = 10000; break; // SAFE
+                    case 1: send_interval = 5000;  break; // WARNING
+                    case 2: send_interval = 3000;  break; // DANGER
+                    case 3: send_interval = 2000;  break; // CRITICAL
+                    default: send_interval = 10000; break;
+                }
+
+                static uint32_t last_send_time = 0;
+                if (loop_counter - last_send_time >= send_interval) {
+                    should_send = 1;
+                    last_send_time = loop_counter;
+                }
+            }
+
+            // Gửi binary packet khi ACTIVE
+            if (should_send) {
+                send_binary_packet_sync(gas_sensor.current_gas, gas_sensor.current_level,
+                                       system_state, relay_state);
+                last_sent_gas = gas_sensor.current_gas;
+                last_sent_state = system_state;
+            }
+
+        } else {
+            // ==== HỆ THỐNG DỪNG - POWER SAVE MODE ====
+            Set_RGB_LED(0, 1, 0);  // LED xanh lá cây nhẹ
+            GPIOA->ODR &= ~(1 << 4);  // Tắt buzzer
+            GPIOA->ODR &= ~(1 << 5);  // Tắt relay
+            relay_state = 0;
+            blink_counter = 0;
+            fast_blink_counter = 0;
+
+            // ==== POWER SAVE: Chỉ gửi heartbeat định kỳ ====
+            static uint32_t last_heartbeat_time = 0;
+            if (loop_counter - last_heartbeat_time >= 45000) { // Mỗi 60s
+                send_heartbeat_only();
+                last_heartbeat_time = loop_counter;
             }
         }
 
-        // ✅ SEND BINARY PACKET WITH IMPROVED FUNCTION
-        if (should_send) {
-            send_binary_packet_safe(gas, gas_level, system_state, relay_state);
-
-            last_sent_gas = gas;
-            last_sent_state = system_state;
-        }
-
-        // ✅ FASTER HEARTBEAT
-        uint32_t heartbeat_interval = system_state ? 30000 : 60000; // Faster heartbeat
-        if (loop_counter % heartbeat_interval == 0) {
-            char hb_msg[60];
-            sprintf(hb_msg, "HEARTBEAT_STATUS_%s_UPTIME_%lu_GAS_%d",
-                    system_state ? "ACTIVE" : "STOPPED", loop_counter/1000, gas);
-            send_text_message(hb_msg);
-        }
-
-        delay_ms(1);  // Keep 1ms loop delay
+        delay_ms(1);  // Giữ nguyên 1ms loop
     }
 }
