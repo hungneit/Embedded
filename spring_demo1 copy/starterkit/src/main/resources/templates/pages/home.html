@@ -207,7 +207,7 @@
                         </tr>
                         <tr th:each="record : ${gasData.content}" class="hover:bg-gray-50">
                             <td class="px-4 py-3 text-sm text-gray-900"
-                                th:text="${#temporals.format(record.timestamp, 'MM-dd HH:mm:ss')}">Time</td>
+                                th:text="${#temporals.format(record.createdAt, 'MM-dd HH:mm:ss')}">Time</td>
                             <td class="px-4 py-3 text-sm font-medium text-gray-900" th:text="${record.deviceId}">Device</td>
                             <td class="px-4 py-3 text-sm text-gray-900" th:text="${record.gasValue}">Gas</td>
                             <td class="px-4 py-3">
