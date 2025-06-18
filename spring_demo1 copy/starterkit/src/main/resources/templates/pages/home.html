@@ -8,7 +8,6 @@
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -476,69 +475,82 @@
 
     function createDeviceCard(data) {
         const cardDiv = document.createElement('div');
-        cardDiv.setAttribute('data-device', data.deviceId);
         const safeTimestamp = parseTimestamp(data.timestamp);
-        cardDiv.setAttribute('data-timestamp', safeTimestamp);
+        const deviceId = data.deviceId;
 
-        console.log(`[CREATE] Card ${data.deviceId} set timestamp: ${safeTimestamp}`);
+        cardDiv.setAttribute('data-device', deviceId);
+        cardDiv.setAttribute('data-timestamp', safeTimestamp);
+        deviceTimestamps[deviceId] = safeTimestamp;
 
         cardDiv.className = 'bg-gray-50 rounded-lg p-4 border';
-        cardDiv.innerHTML = getCardHTML(data);
+        cardDiv.innerHTML = getCardHTML(data, safeTimestamp);
         return cardDiv;
     }
 
 
+
     function updateDeviceCard(card, data) {
-        card.innerHTML = getCardHTML(data);
+        const deviceId = data.deviceId;
+        const lastUpdated = deviceTimestamps[deviceId] || Date.now(); // fallback
+        card.innerHTML = getCardHTML(data, lastUpdated);
     }
 
-    function getCardHTML(data) {
+
+    function getCardHTML(data, lastUpdatedTimestamp) {
         const statusClass = getStatusClass(data.gasStatus);
         const dotClass = data.stm32Connected ? 'pulse-dot' : 'offline-dot';
+        const now = Date.now();
+        const inactiveThreshold = 3 * 60 * 1000; // 3 phút
+        const isInactive = now - lastUpdatedTimestamp > inactiveThreshold;
 
         return `
-                <div class="flex justify-between items-start mb-3">
-                    <h4 class="font-semibold text-gray-900">${data.deviceId}</h4>
-                    <div class="flex items-center">
-                        <div class="${dotClass} mr-2"></div>
-                        <span class="px-2 py-1 text-xs font-medium rounded-full ${statusClass}">
-                            ${data.gasStatus}
-                        </span>
-                    </div>
+            <div class="flex justify-between items-start mb-3">
+                <h4 class="font-semibold text-gray-900">${data.deviceId}</h4>
+                <div class="flex items-center">
+                    <div class="${dotClass} mr-2"></div>
+                    <span class="px-2 py-1 text-xs font-medium rounded-full ${statusClass}">
+                        ${data.gasStatus}
+                    </span>
                 </div>
+            </div>
 
-                <div class="space-y-2 text-sm">
-                    <div class="flex justify-between">
-                        <span class="text-gray-600">Gas:</span>
-                        <span class="font-semibold">${data.gasValue || '--'} ppm</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-600">System:</span>
-                        <span>${data.systemStatus || '--'}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-600">Relay:</span>
-                        <span>${data.relayStatus || '--'}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-600">WiFi:</span>
-                        <span>${data.wifiRssi || '--'} dBm</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-600">Updated:</span>
-                        <span>${new Date(parseTimestamp(data.timestamp)).toLocaleTimeString()}</span>
-
-
-                    </div>
+            <div class="space-y-2 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Gas:</span>
+                    <span class="font-semibold">${data.gasValue || '--'} ppm</span>
                 </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">System:</span>
+                    <span>${data.systemStatus || '--'}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Relay:</span>
+                    <span>${data.relayStatus || '--'}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">WiFi:</span>
+                    <span>${data.wifiRssi || '--'} dBm</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Updated:</span>
+                    <span>${new Date(parseTimestamp(data.timestamp)).toLocaleTimeString()}</span>
+                </div>
+            </div>
 
-                ${data.urgent ? `
+            ${data.urgent ? `
                 <div class="mt-3 p-2 bg-red-100 border border-red-200 rounded text-red-800 text-xs font-medium">
                     🚨 URGENT: ${data.alertLevel || 'Alert'}
                 </div>
-                ` : ''}
-            `;
+            ` : ''}
+
+            ${isInactive ? `
+                <div class="inactive-warning mt-3 p-2 bg-yellow-100 border border-yellow-200 rounded text-yellow-800 text-xs font-medium">
+                    ⚠️ DEVICE INACTIVE: No updates in last 3 minutes
+                </div>
+            ` : ''}
+        `;
     }
+
 
     function getStatusClass(status) {
         switch(status) {
@@ -708,37 +720,37 @@
     }
 
     // Chạy mỗi phút để kiểm tra trạng thái thiết bị
-    setInterval(() => {
-        const now = Date.now();
-        console.log(`[CHECK] Running inactive device check at ${new Date().toLocaleTimeString()}`);
+// Kiểm tra thiết bị không hoạt động mỗi 1 phút
+setInterval(() => {
+    const now = Date.now();
+    const inactiveThreshold = 3 * 60 * 1000; // 3 phút
 
-        document.querySelectorAll('[data-device]').forEach(card => {
-            const deviceId = card.getAttribute('data-device');
-            const rawTimestamp = card.getAttribute('data-timestamp');
-            const lastUpdated = deviceTimestamps[deviceId] || parseTimestamp(rawTimestamp) || 0;
+    console.log(`[CHECK] Running inactive device check at ${new Date(now).toLocaleTimeString()}`);
 
-            const secondsSinceUpdate = Math.round((now - lastUpdated) / 1000);
+    Object.entries(deviceTimestamps).forEach(([deviceId, lastUpdated]) => {
+        const card = document.querySelector(`[data-device="${deviceId}"]`);
+        if (!card) return;
 
-            console.log(`[CHECK] Device ${deviceId} last updated ${secondsSinceUpdate}s ago`);
+        const inactiveDiv = card.querySelector('.inactive-warning');
+        const timeDiff = now - lastUpdated;
 
-            const inactiveDiv = card.querySelector('.inactive-warning');
-
-            if ((now - lastUpdated) > 3 * 60 * 1000) {
-                if (!inactiveDiv) {
-                    console.log(`[WARNING] Device ${deviceId} inactive (> 60s). Showing warning.`);
-                    const warning = document.createElement('div');
-                    warning.className = 'inactive-warning mt-3 p-2 bg-yellow-100 border border-yellow-200 rounded text-yellow-800 text-xs font-medium';
-                    warning.innerHTML = `⚠️ DEVICE INACTIVE: No updates in last 3 minute`;
-                    card.appendChild(warning);
-                }
-            } else {
-                if (inactiveDiv) {
-                    console.log(`[OK] Device ${deviceId} is active again. Removing warning.`);
-                    inactiveDiv.remove();
-                }
+        if (timeDiff > inactiveThreshold) {
+            if (!inactiveDiv) {
+                console.log(`[WARNING] Device ${deviceId} inactive (> 3 mins). Showing warning.`);
+                const warning = document.createElement('div');
+                warning.className = 'inactive-warning mt-3 p-2 bg-yellow-100 border border-yellow-200 rounded text-yellow-800 text-xs font-medium';
+                warning.innerHTML = `⚠️ DEVICE INACTIVE: No updates in last 3 minutes`;
+                card.appendChild(warning);
             }
-        });
-    }, 60 * 1000);
+        } else {
+            if (inactiveDiv) {
+                console.log(`[OK] Device ${deviceId} active again. Removing warning.`);
+                inactiveDiv.remove();
+            }
+        }
+    });
+}, 60 * 1000); // Chạy mỗi 1 phút
+
 </script>
 </body>
 </html>
