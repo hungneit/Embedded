@@ -36,4 +36,7 @@ public interface GasDataRepository extends JpaRepository<GasData, Long> {
 
     // New method to delete old data
     void deleteByTimestampBefore(LocalDateTime cutoffTime);
+
+    Optional<GasData> findTopByDeviceIdOrderByTimestampDesc(String deviceId);
+
 }
